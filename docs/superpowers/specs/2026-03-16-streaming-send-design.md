@@ -38,13 +38,14 @@ A `StreamingRequest` subclass of `twisted.web.server.Request` intercepts PUT req
 
 `handleContentChunk(data)` — called for each chunk of body data as it arrives from the transport. For streaming requests:
 - Pushes the chunk to the `ChunkQueue`
-- If queue is full, pauses the transport via `self.transport.pauseProducing()` (this is the TCP transport, NOT `self.channel.pauseProducing()` which is silently inert during body reception due to the `_handlingRequest` guard)
+- If queue is full, pauses the transport via `self.transport.pauseProducing()`. This is the underlying TCP transport (accessible from Request as `self.transport`), which directly stops reading from the socket. Do NOT use `self.channel.pauseProducing()` — that operates on the response-side producer (`_requestProducer`), not the network input, so it has no effect on body reception.
 - Does NOT call `super().handleContentChunk()` — prevents buffering
 - For non-streaming requests, falls through to `super()`
 
 `requestReceived(command, path, version)` — called when the body is complete. For streaming requests:
 - Signals EOF to the `ChunkQueue` via `queue.finish()`
 - Does NOT call `super().requestReceived()` — the handler was already started from `gotLength`
+- Sets `self.channel._handlingRequest = True` — this ensures the channel correctly tracks request state for HTTP/1.1 keep-alive. Without it, pipelined request handling breaks. (`allContentReceived` normally sets this, but it's set after calling `requestReceived`, so the override must do it.)
 - For non-streaming requests, falls through to `super()`
 
 ### ChunkQueue
@@ -81,29 +82,33 @@ When `Content-Length` is absent, the server requires an `X-Wormhole-Filesize` he
 
 ### Inline PUT /send flow
 
+The background chain maintains a `finished` flag (same pattern as `ReceiveCodeResource._do_receive`). All code paths — normal completion, disconnect, error — check and set this flag before calling `request.finish()` or `session_manager.remove()`. This prevents double-finish bugs when `notifyFinish` fires its callback on normal completion.
+
 ```
 1. curl sends: PUT /send + headers (Content-Length, X-Wormhole-Filename)
 2. gotLength fires (synchronous):
    a. Read path from self.channel._path
-   b. Set self._streaming = True, init ChunkQueue
+   b. Set self._streaming = True, init ChunkQueue, finished = [False]
    c. Set self.content = io.BytesIO() (sentinel)
    d. Set self.method, self.uri, self.path from channel attrs
-   e. Fire background @inlineCallbacks chain (does NOT yield)
+   e. Wire notifyFinish to set finished[0] = True and abort queue on disconnect
+   f. Fire background @inlineCallbacks chain (does NOT yield)
 3. Background chain runs (async, concurrent with body):
    a. Create wormhole, allocate code
-   b. Write "wormhole receive <code>\n" to response
+   b. Set response code 200, write "wormhole receive <code>\n" to response
    c. Write "waiting for receiver...\n"
    d. Start PAKE, call complete_send (blocks until receiver connects)
    e. Transit established → write "transferring...\n"
    f. Consume loop: get() from ChunkQueue → send_record to transit
-   g. After EOF: wait for receiver ack → write "transfer complete\n" → finish
+   g. After EOF: wait for receiver ack → if not finished[0]: write "transfer complete\n", finish, set finished[0] = True
 4. handleContentChunk fires repeatedly (concurrent with step 3):
    - Push chunks to ChunkQueue
    - Backpressure via transport.pauseProducing() if full
 5. requestReceived fires (body complete):
    - queue.finish() → EOF sentinel
+   - Set self.channel._handlingRequest = True
 6. notifyFinish detects sender disconnect at any point:
-   - Abort background chain, close wormhole, finish response
+   - Set finished[0] = True, abort queue, close wormhole
 ```
 
 ### Two-step PUT /send/<code> flow
@@ -146,11 +151,12 @@ send_data_from_queue(connection, queue, request) -> Deferred
 ### Sender disconnect during PAKE wait
 
 The background chain (step 3) may be waiting for a receiver to connect (PAKE). If the sender disconnects during this wait:
-- `request.notifyFinish()` fires its errback
-- The background chain catches this, closes the wormhole, and aborts
+- `request.notifyFinish()` fires its **errback** (callback fires on normal completion, errback on disconnect)
+- The disconnect handler sets `finished[0] = True`, calls `queue.error()`, and closes the wormhole
+- The background chain's pending Deferred (e.g. `complete_send`) errbacks or the next queue `get()` errbacks
 - The session is removed from the manager
 
-This mirrors the pattern already used in `ReceiveCodeResource._do_receive` (server.py lines 103-108).
+This mirrors `ReceiveCodeResource._do_receive` (server.py lines 103-108). The `finished` flag prevents double-finish: on normal completion, the background chain sets `finished[0] = True` and calls `request.finish()`, which causes `notifyFinish` to fire its **callback** (not errback). The disconnect handler checks `finished[0]` and no-ops.
 
 ### What stays the same
 
