@@ -29,7 +29,7 @@ File persistence comes from two things working together:
 **Phase 1 — Session creation (`POST /send/new` or `PUT /send` redirect):**
 - Create wormhole, allocate code
 - Start PAKE key exchange (`get_unverified_key` + `get_verifier`), store the resulting Deferred in the session
-- Attach a no-op errback to the Deferred to suppress Twisted's "unhandled error" warnings if the Deferred errbacks before Phase 2 consumes it
+- Attach a pass-through errback (`addErrback(lambda f: f)`) to the Deferred. This marks the errback chain as "handled" (suppressing Twisted's "unhandled error in Deferred" warnings) while preserving the Failure so Phase 2 still sees the error when it yields the Deferred.
 - Return the code to the caller immediately
 
 **Phase 2 — Upload (`PUT /send/<code>`):**
@@ -81,8 +81,8 @@ Add a `key_exchange_d` field to `Session` to hold the PAKE Deferred from Phase 1
 
 When `SessionManager._expire` fires (session TTL, no upload arrived):
 - `session.wormhole.close()` is called — this causes the in-flight PAKE Deferred to errback
-- The no-op errback attached in Phase 1 suppresses the unhandled error warning
-- No additional cleanup is needed; the wormhole close transitively cancels the PAKE
+- The pass-through errback attached in Phase 1 suppresses the unhandled error warning while preserving the Failure for Phase 2 (if it ever runs)
+- `_expire` must also handle the Deferred returned by `wormhole.close()` itself: `session.wormhole.close().addErrback(lambda f: None)` — the close operation may errback (e.g., transport error during teardown) and this Deferred has no other consumer
 
 ### Timeout semantics
 
