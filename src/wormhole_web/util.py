@@ -38,7 +38,7 @@ def with_timeout(d, timeout, reactor, msg="operation timed out"):
         fireOnOneErrback=True,
         consumeErrors=True,
     )
-    dl.addCallback(lambda result: result[1])
+    dl.addCallback(lambda result: result[0])
 
     def unwrap_first_error(failure):
         failure.trap(defer.FirstError)
