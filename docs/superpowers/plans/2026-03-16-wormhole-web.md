@@ -1139,7 +1139,7 @@ class SendCodeResource(resource.Resource):
             return
 
         # Get filename from header or fallback
-        raw_filename = request.getHeader(b"x-wormhole-filename")
+        raw_filename = request.getHeader("x-wormhole-filename")
         if raw_filename:
             filename = sanitize_filename(
                 raw_filename.decode("utf-8", errors="replace")
@@ -1148,7 +1148,7 @@ class SendCodeResource(resource.Resource):
             filename = "upload"
 
         # Get file size from Content-Length
-        content_length = request.getHeader(b"content-length")
+        content_length = request.getHeader("content-length")
         filesize = int(content_length) if content_length else 0
 
         request.setHeader(b"content-type", b"text/plain")
@@ -1562,10 +1562,18 @@ requires_wormhole_rs = pytest.mark.skipif(
 )
 
 
+def _find_free_port():
+    """Find a free TCP port by briefly binding to port 0."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
 @pytest.fixture(scope="module")
 def server_url():
     """Start wormhole-web server as a subprocess, yield its URL."""
-    port = 19876
+    port = _find_free_port()
     proc = subprocess.Popen(
         ["uv", "run", "wormhole-web", "--port", str(port)],
         cwd=os.path.dirname(os.path.dirname(__file__)),
