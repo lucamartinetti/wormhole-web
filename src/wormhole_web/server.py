@@ -351,6 +351,16 @@ class SendCodeResource(resource.Resource):
                     break
                 connection.send_record(chunk)
 
+            # Wait for the receiver's ack record (sent back via transit after
+            # all data has been received).  Both wormhole-py and wormhole-rs
+            # send {"ack": "ok", "sha256": "<hex>"} before closing the
+            # connection.  We must drain it; otherwise the receiver gets a
+            # broken-pipe when it writes the ack to a closed connection.
+            try:
+                yield connection.receive_record()
+            except Exception:
+                pass  # ack is best-effort
+
             connection.close()
             request.write(b"transfer complete\n")
         except SendError as e:

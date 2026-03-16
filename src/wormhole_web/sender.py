@@ -87,30 +87,28 @@ def prepare_send(wormhole, filename: str, filesize: int, reactor, timeout=120):
         }))
 
         # Step 5: Read two messages from receiver: transit hints and file_ack
-        # (either order — the receiver may send them differently)
-        msg1_bytes = yield with_timeout(
-            w.get_message(), timeout, reactor,
-            "Timed out waiting for receiver response"
-        )
-        msg1 = bytes_to_dict(msg1_bytes)
-        msg2_bytes = yield with_timeout(
-            w.get_message(), timeout, reactor,
-            "Timed out waiting for receiver ack"
-        )
-        msg2 = bytes_to_dict(msg2_bytes)
-
-        transit_msg = None
+        # (either order — the receiver may send them differently).
+        # We fire the transit connection as soon as we have the receiver's
+        # hints so that both sides hit the relay at the same time.
+        connect_d = None
         answer_msg = None
-        for msg in (msg1, msg2):
+
+        for _ in range(2):
+            msg_bytes = yield with_timeout(
+                w.get_message(), timeout, reactor,
+                "Timed out waiting for receiver response"
+            )
+            msg = bytes_to_dict(msg_bytes)
+
             if "transit" in msg:
-                transit_msg = msg
+                ts.add_connection_hints(msg["transit"].get("hints-v1", []))
+                # Start transit connection immediately after we have hints
+                if connect_d is None:
+                    connect_d = ts.connect()
             elif "answer" in msg:
                 answer_msg = msg
             elif "error" in msg:
                 raise SendError(f"Receiver rejected: {msg['error']}")
-
-        if transit_msg is not None:
-            ts.add_connection_hints(transit_msg["transit"].get("hints-v1", []))
 
         if answer_msg is None:
             raise SendError("Never received file_ack from receiver")
@@ -118,9 +116,12 @@ def prepare_send(wormhole, filename: str, filesize: int, reactor, timeout=120):
         if "file_ack" not in answer_msg.get("answer", {}):
             raise SendError(f"Unexpected answer: {answer_msg}")
 
-        # Step 6: Establish transit connection (with timeout)
+        # Step 6: Establish transit connection (with timeout).
+        # connect_d may already be in-flight (started when hints arrived).
+        if connect_d is None:
+            connect_d = ts.connect()
         connection = yield with_timeout(
-            ts.connect(), timeout, reactor,
+            connect_d, timeout, reactor,
             "Timed out establishing transit"
         )
 
