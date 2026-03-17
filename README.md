@@ -76,6 +76,20 @@ wormhole-web [OPTIONS]
 
 TLS termination should be handled by a reverse proxy (Caddy, nginx, etc.).
 
+## Horizontal scaling
+
+Multiple instances can run behind a load balancer. Each `PUT /send` is handled by whichever instance receives it. `GET /receive/<code>` is routed to the instance that owns the wormhole code via consistent hashing.
+
+On **Fly.io**, this works automatically using the `fly-replay` header. When a receive request hits the wrong instance, it transparently replays to the correct one. Set `FLY_API_TOKEN` as a secret for machine discovery:
+
+```bash
+flyctl tokens create deploy -a wormhole-web
+flyctl secrets set FLY_API_TOKEN="FlyV1 ..."
+flyctl scale count 4
+```
+
+No shared state between instances. Scale events during active transfers may disrupt ~1/N of in-flight sessions (wormhole codes are short-lived, so the window is small).
+
 ## License
 
 MIT
