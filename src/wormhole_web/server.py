@@ -5,6 +5,7 @@ import os
 
 from twisted.internet import defer, endpoints
 from twisted.internet import reactor as default_reactor
+from twisted.python import log
 from twisted.web import resource, server, static
 
 from wormhole_web.constants import (
@@ -31,7 +32,7 @@ class HealthResource(resource.Resource):
 class RootResource(resource.Resource):
     """Root resource that wires up the URL tree."""
 
-    def __init__(self, reactor=None, transfer_timeout=120):
+    def __init__(self, reactor=None, transfer_timeout=120, fly_router=None):
         super().__init__()
         self._reactor = reactor or default_reactor
         self._transfer_timeout = transfer_timeout
@@ -54,7 +55,8 @@ class RootResource(resource.Resource):
 
         self.putChild(b"health", HealthResource())
         self.putChild(
-            b"receive", ReceiveResource(self._reactor, self._transfer_timeout)
+            b"receive",
+            ReceiveResource(self._reactor, self._transfer_timeout, fly_router),
         )
 
     def render_GET(self, request):
@@ -79,10 +81,10 @@ class _IndexResource(resource.Resource):
         return self._html
 
 
-def make_site(reactor=None, transfer_timeout=120):
+def make_site(reactor=None, transfer_timeout=120, fly_router=None):
     """Create and return a Twisted Site with all resources wired up."""
     reactor = reactor or default_reactor
-    root = RootResource(reactor, transfer_timeout)
+    root = RootResource(reactor, transfer_timeout, fly_router=fly_router)
     site = server.Site(root)
     site.requestFactory = StreamingRequest
     return site
@@ -94,25 +96,30 @@ def make_site(reactor=None, transfer_timeout=120):
 class ReceiveResource(resource.Resource):
     """GET /receive/<code> — receive a file from a wormhole sender."""
 
-    def __init__(self, reactor, transfer_timeout):
+    def __init__(self, reactor, transfer_timeout, fly_router=None):
         super().__init__()
         self._reactor = reactor
         self._transfer_timeout = transfer_timeout
+        self._fly_router = fly_router
 
     def getChild(self, name, request):
         return ReceiveCodeResource(
-            name.decode("utf-8"), self._reactor, self._transfer_timeout
+            name.decode("utf-8"),
+            self._reactor,
+            self._transfer_timeout,
+            fly_router=self._fly_router,
         )
 
 
 class ReceiveCodeResource(resource.Resource):
     isLeaf = True
 
-    def __init__(self, code, reactor, transfer_timeout):
+    def __init__(self, code, reactor, transfer_timeout, fly_router=None):
         super().__init__()
         self._code = code
         self._reactor = reactor
         self._transfer_timeout = transfer_timeout
+        self._fly_router = fly_router
 
     def render_GET(self, request):
         self._do_receive(request)
@@ -120,6 +127,15 @@ class ReceiveCodeResource(resource.Resource):
 
     @defer.inlineCallbacks
     def _do_receive(self, request):
+        # Check fly routing before doing anything else
+        if self._fly_router:
+            replay = yield self._fly_router.get_replay_header(self._code)
+            if replay:
+                request.setHeader(b"fly-replay", replay.encode())
+                request.setResponseCode(200)
+                request.finish()
+                return
+
         finished = [False]
         wormhole_ref = [None]
         connection_ref = [None]
@@ -230,9 +246,22 @@ def main():
     )
     args = parser.parse_args()
 
+    fly_router = None
+    fly_machine_id = os.environ.get("FLY_MACHINE_ID")
+    if fly_machine_id:
+        from wormhole_web.fly import FlyRouter
+
+        fly_router = FlyRouter(
+            app_name=os.environ["FLY_APP_NAME"],
+            my_machine_id=fly_machine_id,
+        )
+    else:
+        log.msg("routing: disabled (not running on Fly.io)")
+
     site = make_site(
         reactor=default_reactor,
         transfer_timeout=args.transfer_timeout,
+        fly_router=fly_router,
     )
     endpoint = endpoints.TCP4ServerEndpoint(default_reactor, args.port, interface=args.host)
     endpoint.listen(site)
