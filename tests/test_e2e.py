@@ -193,35 +193,28 @@ class TestPythonCLI:
         """curl send via our server → wormhole receive."""
         src_path, expected_hash, size = test_file
 
-        # Get a code
-        result = subprocess.run(
-            ["curl", "-sf", "-X", "POST", f"{server_url}/send/new"],
-            capture_output=True, text=True, timeout=30,
-        )
-        code = result.stdout.strip()
-        assert "-" in code
-
-        # Start upload in background
+        # Start inline send (curl -T to /send, reads code from first line)
         upload = subprocess.Popen(
-            ["curl", "-sf", "-T", src_path,
+            ["curl", "-sN", "-T", src_path,
              "-H", f"X-Wormhole-Filename: {os.path.basename(src_path)}",
-             "-H", f"Content-Length: {size}",
-             f"{server_url}/send/{code}"],
+             f"{server_url}/send"],
             stdout=subprocess.PIPE,
             text=True,
         )
 
+        # Read first line to get the code
+        first_line = upload.stdout.readline().strip()
+        assert first_line.startswith("wormhole receive "), f"Bad first line: {first_line!r}"
+        code = first_line.split()[-1]
+
         # Receive with wormhole CLI
-        # -o accepts a directory; the received file is placed inside it
         with tempfile.TemporaryDirectory() as tmpdir:
             recv = subprocess.run(
                 ["wormhole", "receive", "--accept-file",
                  "-o", tmpdir, code],
                 capture_output=True, text=True, timeout=60,
             )
-            assert recv.returncode == 0, (
-                f"wormhole receive failed: {recv.stderr}"
-            )
+            assert recv.returncode == 0
 
             files = os.listdir(tmpdir)
             assert len(files) == 1
@@ -268,32 +261,25 @@ class TestRustCLI:
         """curl send via our server → wormhole-rs receive."""
         src_path, expected_hash, size = test_file
 
-        result = subprocess.run(
-            ["curl", "-sf", "-X", "POST", f"{server_url}/send/new"],
-            capture_output=True, text=True, timeout=30,
-        )
-        code = result.stdout.strip()
-        assert "-" in code
-
         upload = subprocess.Popen(
-            ["curl", "-sf", "-T", src_path,
+            ["curl", "-sN", "-T", src_path,
              "-H", f"X-Wormhole-Filename: {os.path.basename(src_path)}",
-             "-H", f"Content-Length: {size}",
-             f"{server_url}/send/{code}"],
+             f"{server_url}/send"],
             stdout=subprocess.PIPE,
             text=True,
         )
 
-        # wormhole-rs uses --noconfirm (not --accept-file) and --out-dir (not -o)
+        first_line = upload.stdout.readline().strip()
+        assert first_line.startswith("wormhole receive "), f"Bad first line: {first_line!r}"
+        code = first_line.split()[-1]
+
         with tempfile.TemporaryDirectory() as tmpdir:
             recv = subprocess.run(
                 ["wormhole-rs", "receive", "--noconfirm",
                  "--out-dir", tmpdir, code],
                 capture_output=True, text=True, timeout=60,
             )
-            assert recv.returncode == 0, (
-                f"wormhole-rs receive failed: {recv.stderr}"
-            )
+            assert recv.returncode == 0
 
             files = os.listdir(tmpdir)
             assert len(files) == 1
