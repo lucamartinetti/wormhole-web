@@ -330,10 +330,7 @@ function uploadFile(file, code) {
       if (line.startsWith('transferring')) {
         document.getElementById('send-status-text').textContent = 'transferring...';
       } else if (line.startsWith('transfer complete')) {
-        document.getElementById('send-progress').style.width = '100%';
-        document.getElementById('send-progress').className = 'progress-bar done';
-        document.getElementById('send-status-text').textContent = 'Transfer complete!';
-        document.getElementById('send-status-text').className = 'status-text done';
+        markSendComplete();
       } else if (line.startsWith('error:')) {
         document.getElementById('send-status-text').textContent = line;
         document.getElementById('send-status-text').className = 'status-text error';
@@ -348,12 +345,8 @@ function uploadFile(file, code) {
       document.getElementById('send-status-text').className = 'status-text error';
     }
     // Check final response for transfer complete
-    const text = xhr.responseText;
-    if (text.includes('transfer complete')) {
-      document.getElementById('send-progress').style.width = '100%';
-      document.getElementById('send-progress').className = 'progress-bar done';
-      document.getElementById('send-status-text').textContent = 'Transfer complete!';
-      document.getElementById('send-status-text').className = 'status-text done';
+    if (xhr.responseText.includes('transfer complete')) {
+      markSendComplete();
     }
   };
 
@@ -367,6 +360,14 @@ function uploadFile(file, code) {
   xhr.setRequestHeader('X-Wormhole-Filename', file.name);
   xhr.setRequestHeader('Content-Length', file.size);
   xhr.send(file);
+}
+
+function markSendComplete() {
+  hide('send-code-section');
+  document.getElementById('send-progress').style.width = '100%';
+  document.getElementById('send-progress').className = 'progress-bar done';
+  document.getElementById('send-status-text').textContent = 'Transfer complete!';
+  document.getElementById('send-status-text').className = 'status-text done';
 }
 
 function cancelSend() {
