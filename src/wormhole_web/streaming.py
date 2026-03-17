@@ -237,34 +237,51 @@ class StreamingRequest(server.Request):
 def _send_data_from_queue(connection, queue):
     """Consume chunks from queue and pipe through wormhole transit.
 
-    Uses a simple rate limiter: send at most BATCH_SIZE chunks, then
-    yield control to the reactor to let the transit socket drain.
-    This prevents unbounded write buffer growth that causes OOM.
+    Registers as a push producer on the transit transport so Twisted
+    applies backpressure: when the socket write buffer is full,
+    Twisted calls pauseProducing and we stop reading from the queue.
+    When the buffer drains, resumeProducing fires and we continue.
     """
-    BATCH_SIZE = 4  # send 4 chunks (~1MB), then yield
+    transport = connection.transport
 
-    count = 0
-    while True:
-        chunk = yield queue.get()
-        if chunk is None:
-            break
-        connection.send_record(chunk)
-        count += 1
+    # Producer state
+    paused_d = [None]  # Deferred that fires when resumed
+    stopped = [False]
 
-        # Every BATCH_SIZE chunks, yield to the reactor so the transit
-        # socket can drain its write buffer. Without this, a fast upload
-        # (e.g., local loopback) fills the write buffer faster than the
-        # transit relay can consume it, leading to OOM.
-        if count >= BATCH_SIZE:
-            count = 0
-            # Yield to reactor to let transit socket drain
-            d = defer.Deferred()
-            try:
-                from twisted.internet import reactor as _reactor
-                _reactor.callLater(0, d.callback, None)
-            except Exception:
+    class QueueProducer:
+        """IPushProducer that controls queue consumption."""
+        def pauseProducing(self):
+            # Transport buffer is full — stop reading from queue
+            if paused_d[0] is None:
+                paused_d[0] = defer.Deferred()
+
+        def resumeProducing(self):
+            # Buffer drained — resume reading from queue
+            if paused_d[0] is not None:
+                d, paused_d[0] = paused_d[0], None
                 d.callback(None)
-            yield d
+
+        def stopProducing(self):
+            stopped[0] = True
+            if paused_d[0] is not None:
+                d, paused_d[0] = paused_d[0], None
+                d.errback(Exception("producer stopped"))
+
+    producer = QueueProducer()
+    transport.registerProducer(producer, True)  # True = push producer
+
+    try:
+        while not stopped[0]:
+            chunk = yield queue.get()
+            if chunk is None:
+                break
+            connection.send_record(chunk)
+
+            # If transport signaled pause, wait for resume
+            if paused_d[0] is not None:
+                yield paused_d[0]
+    finally:
+        transport.unregisterProducer()
 
     # Wait for receiver ack
     try:

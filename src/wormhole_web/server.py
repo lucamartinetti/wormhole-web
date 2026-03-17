@@ -209,10 +209,29 @@ class ReceiveCodeResource(resource.Resource):
                 finished[0] = True
                 request.loseConnection()
 
+        # Backpressure: register as a producer on the HTTP transport
+        # so Twisted pauses us when the write buffer is full.
+        paused_d = [None]
+
+        class ReceiveProducer:
+            def pauseProducing(self):
+                if paused_d[0] is None:
+                    paused_d[0] = defer.Deferred()
+            def resumeProducing(self):
+                if paused_d[0] is not None:
+                    d, paused_d[0] = paused_d[0], None
+                    d.callback(None)
+            def stopProducing(self):
+                finished[0] = True
+                if paused_d[0] is not None:
+                    d, paused_d[0] = paused_d[0], None
+                    d.errback(Exception("producer stopped"))
+
+        recv_producer = ReceiveProducer()
+        request.registerProducer(recv_producer, True)
+
         try:
             reset_stall_timer()
-            BATCH = 4  # yield to reactor every N chunks for backpressure
-            batch_count = 0
             while bytes_received < offer.filesize and not finished[0]:
                 record = yield connection.receive_record()
                 remaining = offer.filesize - bytes_received
@@ -221,14 +240,11 @@ class ReceiveCodeResource(resource.Resource):
                 if not finished[0]:
                     request.write(chunk)
                     reset_stall_timer()
-                    batch_count += 1
-                    if batch_count >= BATCH:
-                        batch_count = 0
-                        # Yield to reactor so HTTP write buffer can drain
-                        drain_d = defer.Deferred()
-                        self._reactor.callLater(0, drain_d.callback, None)
-                        yield drain_d
+                    # Wait if HTTP transport signaled pause
+                    if paused_d[0] is not None:
+                        yield paused_d[0]
             if not finished[0]:
+                request.unregisterProducer()
                 request.finish()
                 finished[0] = True
         except Exception:
