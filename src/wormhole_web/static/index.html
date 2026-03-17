@@ -101,7 +101,7 @@ h1 {
   gap: 10px;
   margin-bottom: 14px;
 }
-.file-icon { font-size: 28px; }
+.file-icon { width: 24px; height: 24px; color: #868e96; flex-shrink: 0; }
 .file-name { font-weight: 600; font-size: 14px; }
 .file-size { color: #868e96; font-size: 12px; }
 .code-box {
@@ -191,7 +191,7 @@ h1 {
   <div id="send-status" class="hidden">
     <div class="send-status">
       <div class="file-info">
-        <span class="file-icon">&#128196;</span>
+        <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <div>
           <div class="file-name" id="send-filename"></div>
           <div class="file-size" id="send-filesize"></div>
