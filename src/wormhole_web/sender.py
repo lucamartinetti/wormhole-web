@@ -27,28 +27,11 @@ def create_send_session(reactor):
 
 
 @defer.inlineCallbacks
-def start_key_exchange(wormhole, reactor):
-    """Start PAKE key exchange in the background.
-
-    Returns a Deferred that fires when key exchange completes.
-    Does NOT apply a timeout — the caller stores the Deferred and
-    Phase 2 (complete_send) applies the timeout.
-    """
-    yield wormhole.get_unverified_key()
-    yield wormhole.get_verifier()
-
-
-@defer.inlineCallbacks
-def complete_send(wormhole, key_exchange_d, filename, filesize, reactor, timeout=120):
-    """Complete the send protocol after key exchange.
-
-    Awaits the key exchange Deferred (may already be resolved),
-    then sends transit hints + file offer, waits for receiver's
-    response, and establishes transit.
+def complete_send(wormhole, filename, filesize, reactor, timeout=120):
+    """Do PAKE key exchange, send transit hints + file offer, establish transit.
 
     Args:
-        wormhole: The wormhole object.
-        key_exchange_d: Deferred from start_key_exchange (may be resolved).
+        wormhole: The wormhole object (from create_send_session).
         filename: Name of the file being sent.
         filesize: Size in bytes.
         reactor: The Twisted reactor.
@@ -59,11 +42,12 @@ def complete_send(wormhole, key_exchange_d, filename, filesize, reactor, timeout
     """
     w = wormhole
     try:
-        # Wait for PAKE to complete (with timeout starting now)
+        # PAKE key exchange (with timeout)
         yield with_timeout(
-            key_exchange_d, timeout, reactor,
+            w.get_unverified_key(), timeout, reactor,
             "Timed out waiting for receiver"
         )
+        yield w.get_verifier()
 
         # Set up transit sender (derive_key requires PAKE to be done)
         ts = TransitSender(
