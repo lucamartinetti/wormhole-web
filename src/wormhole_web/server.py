@@ -246,6 +246,9 @@ def main():
     )
     args = parser.parse_args()
 
+    import sys
+    log.startLogging(sys.stdout)
+
     fly_router = None
     fly_machine_id = os.environ.get("FLY_MACHINE_ID")
     if fly_machine_id:
