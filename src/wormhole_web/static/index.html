@@ -137,17 +137,32 @@ h1 {
   cursor: pointer;
 }
 .btn-action:hover { background: #f1f3f5; }
-.qr-container { text-align: center; margin-bottom: 14px; }
-.qr-container canvas, .qr-container img { margin: 0 auto; }
-.qr-toggle {
-  font-size: 11px;
+.mode-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.mode-tab {
+  flex: 1;
+  padding: 6px 0;
+  border: none;
+  background: #f8f9fa;
+  font-size: 13px;
   color: #868e96;
   cursor: pointer;
-  text-decoration: underline;
-  display: inline-block;
-  margin-top: 6px;
 }
-.qr-toggle:hover { color: #495057; }
+.mode-tab:not(:last-child) { border-right: 1px solid #ced4da; }
+.mode-tab:hover { background: #e9ecef; }
+.mode-tab.active {
+  background: #228be6;
+  color: white;
+}
+.qr-container { text-align: center; margin-bottom: 14px; }
+.qr-container canvas, .qr-container img { margin: 0 auto; }
 .progress-track {
   background: #e9ecef;
   border-radius: 4px;
@@ -228,9 +243,12 @@ h1 {
             <span>Share</span>
           </button>
         </div>
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="tab-web" onclick="setQrMode(true)">Web</button>
+          <button class="mode-tab" id="tab-wormhole" onclick="setQrMode(false)">Wormhole</button>
+        </div>
         <div class="qr-container">
           <div id="qr-display"></div>
-          <span class="qr-toggle" id="qr-toggle" onclick="toggleQrMode()">Show wormhole QR</span>
         </div>
       </div>
       <div class="progress-track"><div class="progress-bar" id="send-progress"></div></div>
@@ -303,14 +321,13 @@ function updateCodeDisplay() {
   }
 }
 
-function toggleQrMode() {
-  qrModeWeb = !qrModeWeb;
-  const toggle = document.getElementById('qr-toggle');
-  if (qrModeWeb) {
-    toggle.textContent = 'Show wormhole QR';
+function setQrMode(web) {
+  qrModeWeb = web;
+  document.getElementById('tab-web').classList.toggle('active', web);
+  document.getElementById('tab-wormhole').classList.toggle('active', !web);
+  if (web) {
     renderQr(getReceiveUrl());
   } else {
-    toggle.textContent = 'Show web link QR';
     renderQr('wormhole-transfer:' + currentCode);
   }
   updateCodeDisplay();
@@ -360,10 +377,7 @@ function startSend(file) {
       code = code.trim();
       currentCode = code;
       show('send-code-section');
-      qrModeWeb = true;
-      document.getElementById('qr-toggle').textContent = 'Show wormhole QR';
-      updateCodeDisplay();
-      renderQr(getReceiveUrl());
+      setQrMode(true);
       // Show share button if Web Share API is available (mobile)
       if (navigator.share) {
         document.getElementById('btn-share').style.display = '';
