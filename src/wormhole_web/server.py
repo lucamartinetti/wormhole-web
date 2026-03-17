@@ -295,6 +295,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Wormhole Web — HTTP gateway")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--max-sessions", type=int, default=DEFAULT_MAX_SESSIONS)
     parser.add_argument("--session-ttl", type=int, default=DEFAULT_SESSION_TTL)
     parser.add_argument(
@@ -308,7 +309,7 @@ def main():
         session_ttl=args.session_ttl,
         transfer_timeout=args.transfer_timeout,
     )
-    endpoint = endpoints.TCP4ServerEndpoint(default_reactor, args.port)
+    endpoint = endpoints.TCP4ServerEndpoint(default_reactor, args.port, interface=args.host)
     endpoint.listen(site)
     print(f"wormhole-web listening on :{args.port}")
     default_reactor.run()
