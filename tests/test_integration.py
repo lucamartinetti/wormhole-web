@@ -8,67 +8,10 @@ conflicts with concurrent wormhole operations.
 
 import hashlib
 import os
-import signal
-import socket
 import subprocess
 import tempfile
-import time
 
 import pytest
-
-
-def _find_free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
-@pytest.fixture(scope="module")
-def server_url():
-    """Start wormhole-web server as a subprocess."""
-    port = _find_free_port()
-    proc = subprocess.Popen(
-        ["uv", "run", "wormhole-web", "--port", str(port)],
-        cwd=os.path.dirname(os.path.dirname(__file__)),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-    url = f"http://127.0.0.1:{port}"
-    for _ in range(20):
-        try:
-            result = subprocess.run(
-                ["curl", "-sf", f"{url}/health"],
-                capture_output=True, timeout=2,
-            )
-            if result.returncode == 0:
-                break
-        except subprocess.TimeoutExpired:
-            pass
-        time.sleep(0.5)
-    else:
-        proc.kill()
-        raise RuntimeError("Server failed to start")
-
-    yield url
-
-    proc.send_signal(signal.SIGTERM)
-    try:
-        proc.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-
-
-@pytest.fixture
-def test_data():
-    """Generate 10KB of random test data with checksum."""
-    data = os.urandom(1024 * 10)
-    sha = hashlib.sha256(data).hexdigest()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
-        f.write(data)
-        path = f.name
-    yield path, sha, len(data)
-    os.unlink(path)
 
 
 def _run_wormhole_script(script, timeout=60):
@@ -91,8 +34,8 @@ def _run_wormhole_script(script, timeout=60):
 class TestReceivePath:
     """Test: wormhole library sends → our server receives via HTTP."""
 
-    def test_receive_file(self, server_url, test_data):
-        src_path, expected_hash, size = test_data
+    def test_receive_file(self, server_url, test_file):
+        src_path, expected_hash, size = test_file
 
         # Run sender + curl receiver in a script
         script = f'''
@@ -173,8 +116,8 @@ reactor.run()
 class TestSendPath:
     """Test: our server sends via PUT /send → wormhole library receives."""
 
-    def test_send_file(self, server_url, test_data):
-        src_path, expected_hash, size = test_data
+    def test_send_file(self, server_url, test_file):
+        src_path, expected_hash, size = test_file
 
         # Start inline send (curl -T file http://host/send)
         # -N disables output buffering so we can read the first line immediately
