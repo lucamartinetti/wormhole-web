@@ -87,6 +87,8 @@ def make_site(reactor=None, transfer_timeout=120, fly_router=None):
     root = RootResource(reactor, transfer_timeout, fly_router=fly_router)
     site = server.Site(root)
     site.requestFactory = StreamingRequest
+    site.wormhole_reactor = reactor
+    site.wormhole_timeout = transfer_timeout
     return site
 
 

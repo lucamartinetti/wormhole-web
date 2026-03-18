@@ -184,8 +184,8 @@ class StreamingRequest(server.Request):
         finished = self._finished_flag
         queue = self._chunk_queue
         site = self.channel.site
-        reactor = site.resource._reactor
-        transfer_timeout = site.resource._transfer_timeout
+        reactor = site.wormhole_reactor
+        transfer_timeout = site.wormhole_timeout
         wormhole = None
 
         try:
