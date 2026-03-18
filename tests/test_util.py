@@ -33,3 +33,7 @@ def test_preserves_spaces_and_dots():
 
 def test_strips_control_characters():
     assert sanitize_filename("file\nname\r.txt") == "filename.txt"
+
+
+def test_strips_double_quotes():
+    assert sanitize_filename('my"file.txt') == "my_file.txt"

@@ -58,6 +58,8 @@ def sanitize_filename(name: str | None) -> str:
         return "upload"
     # Remove null bytes and control characters
     name = re.sub(r"[\x00-\x1f\x7f]", "", name)
+    # Replace double quotes to avoid breaking Content-Disposition headers
+    name = name.replace('"', "_")
     # Normalize path separators and take basename
     name = name.replace("\\", "/")
     name = os.path.basename(name)
