@@ -90,6 +90,73 @@ class TestFlyRouterReplayHeader(unittest.TestCase):
         self.assertTrue(replayed, "Expected at least one code to be replayed")
 
 
+class TestFlyRouterLocalCodes(unittest.TestCase):
+    @defer.inlineCallbacks
+    def test_registered_code_handled_locally(self):
+        """A code registered via register_local_code() is always handled
+        locally, even if the hash ring would route it elsewhere."""
+        data = _make_machines_response(["m1", "m2", "m3"])
+        router = FlyRouter("myapp", "m1")
+
+        # Find a code that the hash ring would route away from m1
+        with mock.patch.object(router, "_fetch_machines_sync", return_value=data):
+            remote_code = None
+            for i in range(200):
+                code = f"code-{i}"
+                result = yield router.get_replay_header(code)
+                if result is not None:
+                    remote_code = code
+                    break
+            self.assertIsNotNone(remote_code, "Need a code that routes remotely")
+
+            # Register it locally — should now return None (handle locally)
+            router.register_local_code(remote_code)
+            result = yield router.get_replay_header(remote_code)
+            self.assertIsNone(result)
+
+    @defer.inlineCallbacks
+    def test_unregistered_code_routes_normally(self):
+        """After unregister_local_code(), hash ring routing resumes."""
+        data = _make_machines_response(["m1", "m2", "m3"])
+        router = FlyRouter("myapp", "m1")
+
+        with mock.patch.object(router, "_fetch_machines_sync", return_value=data):
+            # Find a remote code
+            remote_code = None
+            for i in range(200):
+                code = f"code-{i}"
+                result = yield router.get_replay_header(code)
+                if result is not None:
+                    remote_code = code
+                    break
+            self.assertIsNotNone(remote_code)
+
+            # Register then unregister
+            router.register_local_code(remote_code)
+            router.unregister_local_code(remote_code)
+
+            result = yield router.get_replay_header(remote_code)
+            self.assertIsNotNone(result)
+            self.assertTrue(result.startswith("instance="))
+
+    def test_unregister_nonexistent_code_is_safe(self):
+        """unregister_local_code() does not raise for unknown codes."""
+        router = FlyRouter("myapp", "m1")
+        # Should not raise
+        router.unregister_local_code("never-registered")
+
+    def test_register_multiple_codes(self):
+        """Multiple codes can be registered simultaneously."""
+        router = FlyRouter("myapp", "m1")
+        router.register_local_code("code-a")
+        router.register_local_code("code-b")
+        self.assertIn("code-a", router._local_codes)
+        self.assertIn("code-b", router._local_codes)
+        router.unregister_local_code("code-a")
+        self.assertNotIn("code-a", router._local_codes)
+        self.assertIn("code-b", router._local_codes)
+
+
 class TestFlyRouterAPIFailure(unittest.TestCase):
     @defer.inlineCallbacks
     def test_uses_cached_on_failure(self):

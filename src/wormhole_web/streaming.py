@@ -187,11 +187,19 @@ class StreamingRequest(server.Request):
         reactor = site.resource._reactor
         transfer_timeout = site.resource._transfer_timeout
         wormhole = None
+        code = None
+
+        fly_router = getattr(site, "fly_router", None)
 
         try:
             code, wormhole = yield create_send_session(reactor)
 
+            if fly_router is not None:
+                fly_router.register_local_code(code)
+
             if finished[0]:
+                if fly_router is not None:
+                    fly_router.unregister_local_code(code)
                 yield wormhole.close()
                 return
 
@@ -219,6 +227,8 @@ class StreamingRequest(server.Request):
                 self.finish()
                 finished[0] = True
 
+            if fly_router is not None and code:
+                fly_router.unregister_local_code(code)
             yield wormhole.close()
 
         except Exception as e:
@@ -226,6 +236,8 @@ class StreamingRequest(server.Request):
                 self.write(f"error: {e}\n".encode())
                 self.finish()
                 finished[0] = True
+            if fly_router is not None and code:
+                fly_router.unregister_local_code(code)
             if wormhole:
                 try:
                     yield wormhole.close()

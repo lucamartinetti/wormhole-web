@@ -32,6 +32,8 @@ class FlyRouter:
             f"http://_api.internal:4280/v1/apps/{app_name}/machines"
         )
 
+        self._local_codes = set()
+
         log.msg(
             f"routing: enabled my_id={self._my_id} app={self._app_name}"
         )
@@ -105,6 +107,18 @@ class FlyRouter:
                 # Fall back to single-instance mode: only us
                 defer.returnValue([self._my_id])
 
+    # -- local code registration --------------------------------------------
+
+    def register_local_code(self, code):
+        """Mark *code* as owned by this instance (created locally)."""
+        self._local_codes.add(code)
+        log.msg(f"routing: registered local code={code}")
+
+    def unregister_local_code(self, code):
+        """Remove *code* from the local set."""
+        self._local_codes.discard(code)
+        log.msg(f"routing: unregistered local code={code}")
+
     # -- routing helpers ----------------------------------------------------
 
     @defer.inlineCallbacks
@@ -113,6 +127,12 @@ class FlyRouter:
 
         Also refreshes the machine list / hash ring as needed.
         """
+        if code in self._local_codes:
+            log.msg(
+                f"routing: code={code} action=handle (local override)"
+            )
+            defer.returnValue(None)
+
         machines = yield self.get_machines()
 
         if not self._router:
