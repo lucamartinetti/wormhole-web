@@ -13,24 +13,15 @@ pub fn init() {
     console_error_panic_hook::set_once();
 }
 
-// Default transit relay has no WSS support.
-// Least Authority operates a WSS-capable transit relay.
-const TRANSIT_RELAY_WSS: &str = "wss://relay.mw.leastauthority.com";
-
 fn app_config() -> AppConfig<AppVersion> {
     transfer::APP_CONFIG.clone()
 }
 
-fn relay_hints() -> Vec<transit::RelayHint> {
-    // Include both WSS (for browser) and TCP (for CLI peer) hints
-    // pointing at the same relay so they get bridged together.
+fn relay_hints(transit_relay_url: &str) -> Vec<transit::RelayHint> {
     vec![
         transit::RelayHint::from_urls(
             None,
-            [
-                TRANSIT_RELAY_WSS.parse().unwrap(),
-                "tcp://relay.mw.leastauthority.com:4001".parse().unwrap(),
-            ],
+            [transit_relay_url.parse().unwrap()],
         )
         .unwrap(),
     ]
@@ -173,6 +164,7 @@ impl AsyncWrite for ChannelWriter {
 pub struct WormholeSender {
     code: String,
     mailbox: Option<MailboxConnection<AppVersion>>,
+    transit_relay_url: String,
     verifier_bytes: Option<Vec<u8>>,
     conn_type: Option<String>,
     chunk_tx: Option<mpsc::Sender<Vec<u8>>>,
@@ -183,8 +175,9 @@ pub struct WormholeSender {
 impl WormholeSender {
     /// Allocate a code and connect to the mailbox relay.
     /// Returns immediately with the code — does NOT wait for receiver.
+    /// transit_relay_url: WebSocket URL for the transit relay (e.g. "ws://localhost:4002")
     #[wasm_bindgen]
-    pub async fn create() -> Result<WormholeSender, JsError> {
+    pub async fn create(transit_relay_url: &str) -> Result<WormholeSender, JsError> {
         web_sys::console::log_1(&"[wormhole] connecting to mailbox relay...".into());
         let config = app_config();
         let mailbox = MailboxConnection::create(config, 2)
@@ -196,6 +189,7 @@ impl WormholeSender {
         Ok(WormholeSender {
             code,
             mailbox: Some(mailbox),
+            transit_relay_url: transit_relay_url.to_string(),
             verifier_bytes: None,
             conn_type: None,
             chunk_tx: None,
@@ -252,7 +246,7 @@ impl WormholeSender {
         let (done_tx, done_rx) = oneshot::channel();
 
         let filename = filename.to_string();
-        let relay = relay_hints();
+        let relay = relay_hints(&self.transit_relay_url);
 
         // Spawn the send task - it will run in the background, reading from
         // the channel as JS feeds chunks in
@@ -338,6 +332,7 @@ impl WormholeSender {
 #[wasm_bindgen]
 pub struct WormholeReceiver {
     mailbox: Option<MailboxConnection<AppVersion>>,
+    transit_relay_url: String,
     verifier_bytes: Option<Vec<u8>>,
     conn_type: Option<String>,
     receive_request: Option<transfer::ReceiveRequest>,
@@ -348,8 +343,9 @@ pub struct WormholeReceiver {
 #[wasm_bindgen]
 impl WormholeReceiver {
     /// Connect to mailbox relay with the given code.
+    /// transit_relay_url: WebSocket URL for the transit relay (e.g. "ws://localhost:4002")
     #[wasm_bindgen]
-    pub async fn create(code: &str) -> Result<WormholeReceiver, JsError> {
+    pub async fn create(code: &str, transit_relay_url: &str) -> Result<WormholeReceiver, JsError> {
         web_sys::console::log_1(&format!("[wormhole] connecting to mailbox with code: {code}").into());
         let config = app_config();
         let code: Code = code
@@ -362,6 +358,7 @@ impl WormholeReceiver {
 
         Ok(WormholeReceiver {
             mailbox: Some(mailbox),
+            transit_relay_url: transit_relay_url.to_string(),
             verifier_bytes: None,
             conn_type: None,
             receive_request: None,
@@ -399,7 +396,7 @@ impl WormholeReceiver {
         self.verifier_bytes = Some(AsRef::<[u8]>::as_ref(wormhole.verifier()).to_vec());
         web_sys::console::log_1(&"[wormhole] SPAKE2 complete, waiting for file offer...".into());
 
-        let relay = relay_hints();
+        let relay = relay_hints(&self.transit_relay_url);
         let req = transfer::request_file(
             wormhole,
             relay,

@@ -260,12 +260,38 @@ class ReceiveCodeResource(resource.Resource):
 # --- CLI entry point ---
 
 
+def start_transit_relay(reactor, port, host="0.0.0.0"):
+    """Start an embedded WebSocket transit relay for browser WASM clients."""
+    import time as _time
+    from autobahn.twisted.websocket import WebSocketServerFactory
+    from wormhole_transit_relay.transit_server import (
+        Transit,
+        WebSocketTransitConnection,
+    )
+    from wormhole_transit_relay.usage import create_usage_tracker
+
+    usage = create_usage_tracker(blur_usage=None, log_file=None, usage_db=None)
+    transit = Transit(usage, _time.time)
+
+    ws_url = f"ws://localhost:{port}"
+    ws_factory = WebSocketServerFactory(ws_url)
+    ws_factory.protocol = WebSocketTransitConnection
+    ws_factory.transit = transit
+    ws_factory.log_requests = False
+
+    ep = endpoints.TCP4ServerEndpoint(reactor, port, interface=host)
+    ep.listen(ws_factory)
+    log.msg(f"transit relay (WebSocket) listening on :{port}")
+
+
 def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Wormhole Web — HTTP gateway")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--transit-port", type=int, default=4002,
+                        help="Port for WebSocket transit relay (default: 4002)")
     parser.add_argument(
         "--transfer-timeout", type=int, default=DEFAULT_TRANSFER_TIMEOUT
     )
@@ -294,6 +320,10 @@ def main():
     endpoint = endpoints.TCP4ServerEndpoint(default_reactor, args.port, interface=args.host)
     endpoint.listen(site)
     print(f"wormhole-web listening on :{args.port}")
+
+    # Start embedded transit relay for WASM browser clients
+    start_transit_relay(default_reactor, args.transit_port, args.host)
+
     default_reactor.run()
 
 

@@ -109,13 +109,17 @@ export class WormholeReceiver {
     }
     /**
      * Connect to mailbox relay with the given code.
+     * transit_relay_url: WebSocket URL for the transit relay (e.g. "ws://localhost:4002")
      * @param {string} code
+     * @param {string} transit_relay_url
      * @returns {Promise<WormholeReceiver>}
      */
-    static create(code) {
+    static create(code, transit_relay_url) {
         const ptr0 = passStringToWasm0(code, wasm.__wbindgen_export, wasm.__wbindgen_export2);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.wormholereceiver_create(ptr0, len0);
+        const ptr1 = passStringToWasm0(transit_relay_url, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wormholereceiver_create(ptr0, len0, ptr1, len1);
         return takeObject(ret);
     }
     /**
@@ -230,10 +234,14 @@ export class WormholeSender {
     /**
      * Allocate a code and connect to the mailbox relay.
      * Returns immediately with the code — does NOT wait for receiver.
+     * transit_relay_url: WebSocket URL for the transit relay (e.g. "ws://localhost:4002")
+     * @param {string} transit_relay_url
      * @returns {Promise<WormholeSender>}
      */
-    static create() {
-        const ret = wasm.wormholesender_create();
+    static create(transit_relay_url) {
+        const ptr0 = passStringToWasm0(transit_relay_url, wasm.__wbindgen_export, wasm.__wbindgen_export2);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wormholesender_create(ptr0, len0);
         return takeObject(ret);
     }
     /**

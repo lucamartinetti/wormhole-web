@@ -5,6 +5,7 @@ description = "HTTP gateway for Magic Wormhole"
 requires-python = ">=3.12"
 dependencies = [
     "magic-wormhole",
+    "magic-wormhole-transit-relay",
     "twisted[tls]",
     "uhashring",
 ]

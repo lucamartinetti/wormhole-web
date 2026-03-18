@@ -67,6 +67,10 @@ function sanitizeFilename(name) {
     || 'download';
 }
 
+// Transit relay URL — our server embeds a WebSocket transit relay
+const TRANSIT_RELAY_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') +
+  location.hostname + ':4002';
+
 // --- WASM Send ---
 async function wasmSend(file, callbacks) {
   const { onCode, onVerifier, onProgress, onStatus, onError, onComplete } = callbacks;
@@ -74,7 +78,7 @@ async function wasmSend(file, callbacks) {
   let sender = null;
   try {
     onStatus('allocating code...');
-    sender = await wasm.WormholeSender.create();
+    sender = await wasm.WormholeSender.create(TRANSIT_RELAY_URL);
     const code = sender.code();
     onCode(code);
 
@@ -119,7 +123,7 @@ async function wasmReceive(code, callbacks) {
   let receiver = null;
   try {
     onStatus('establishing encrypted connection...');
-    receiver = await wasm.WormholeReceiver.create(code);
+    receiver = await wasm.WormholeReceiver.create(code, TRANSIT_RELAY_URL);
 
     onStatus('waiting for file offer...');
     const offer = await receiver.negotiate();
