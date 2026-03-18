@@ -13,18 +13,27 @@ pub fn init() {
     console_error_panic_hook::set_once();
 }
 
-const TRANSIT_RELAY: &str = "wss://transit.magic-wormhole.io:443";
+// Default transit relay has no WSS support.
+// Least Authority operates a WSS-capable transit relay.
+const TRANSIT_RELAY_WSS: &str = "wss://relay.mw.leastauthority.com";
 
 fn app_config() -> AppConfig<AppVersion> {
     transfer::APP_CONFIG.clone()
 }
 
 fn relay_hints() -> Vec<transit::RelayHint> {
-    vec![transit::RelayHint::from_urls(
-        None,
-        [TRANSIT_RELAY.parse().unwrap()],
-    )
-    .unwrap()]
+    // Include both WSS (for browser) and TCP (for CLI peer) hints
+    // pointing at the same relay so they get bridged together.
+    vec![
+        transit::RelayHint::from_urls(
+            None,
+            [
+                TRANSIT_RELAY_WSS.parse().unwrap(),
+                "tcp://relay.mw.leastauthority.com:4001".parse().unwrap(),
+            ],
+        )
+        .unwrap(),
+    ]
 }
 
 /// Map verifier bytes to an emoji pair.
