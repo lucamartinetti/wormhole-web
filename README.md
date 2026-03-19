@@ -1,94 +1,69 @@
-# wormhole-web
+# wormhole.page
 
-HTTP gateway for [Magic Wormhole](https://magic-wormhole.readthedocs.io/). Send and receive files via `curl` on machines without a wormhole client installed, interoperable with the standard `wormhole` and `wormhole-rs` CLIs.
+End-to-end encrypted file transfer in the browser. Drop a file, share the code, done.
+
+Built on [Magic Wormhole](https://magic-wormhole.readthedocs.io/) — fully interoperable with the standard `wormhole` and `wormhole-rs` CLIs. Your files never touch the server.
+
+**Live at [wormhole.page](https://wormhole.page)**
+
+## How it works
+
+Your browser runs a full Magic Wormhole client via WebAssembly (compiled from [wormhole-rs](https://github.com/magic-wormhole/magic-wormhole.rs)). SPAKE2 key exchange and NaCl SecretBox encryption happen entirely client-side — the server only serves static files and bridges WebSocket transit to the public relay.
+
+```
+Browser ──WSS──▶ mailbox relay    (SPAKE2 key exchange)
+Browser ──WS───▶ our server ──TCP──▶ transit relay  (encrypted data)
+CLI ────────────────────TCP────────▶ transit relay  (encrypted data)
+```
+
+The server **cannot** decrypt your files. It sees only encrypted transit traffic.
 
 ## Usage
 
-### Send a file
+### Browser → CLI
+
+1. Open [wormhole.page](https://wormhole.page)
+2. Drop a file
+3. Share the code with the receiver
+4. Receiver runs: `wormhole-rs receive <code>`
+
+### CLI → Browser
+
+1. Run: `wormhole-rs send myfile.txt`
+2. Open [wormhole.page](https://wormhole.page)
+3. Enter the code and click Receive
+
+### Browser → Browser
+
+Open [wormhole.page](https://wormhole.page) in two tabs (or two devices). Send in one, receive in the other.
+
+## Self-hosting
+
+Requires Rust 1.94+ and wasm-pack.
 
 ```bash
-curl -T myfile.tar.gz http://localhost:8080/send/
-```
-
-Output:
-```
-wormhole receive 7-guitarist-revenge
-waiting for receiver...
-transferring...
-transfer complete
-```
-
-Share the first line with the receiver. They run `wormhole receive 7-guitarist-revenge` on their machine.
-
-The upload streams directly to the receiver with constant memory usage — no file size limit.
-
-### Receive a file
-
-Someone sends you a file with `wormhole send`. You receive it with curl:
-
-```bash
-curl -OJ http://localhost:8080/receive/7-guitarist-revenge
-```
-
-## Install
-
-Requires Python 3.12+.
-
-```bash
-git clone https://github.com/lucamartinetti/wormhole-web.git
+git clone https://github.com/lucamartinetti/wormhole-page.git
 cd wormhole-web
-uv sync
-uv run wormhole-web --port 8080
+make build
+make run
 ```
 
 ### Container
 
 ```bash
-podman build -t wormhole-web .
-podman run -p 8080:8080 wormhole-web
+podman build -t wormhole-page .
+podman run -p 8080:8080 wormhole-page
 ```
 
-## API
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `PUT` | `/send` | Send a file. Streams upload directly to wormhole transit. Returns the code on the first line of the response. |
-| `GET` | `/receive/<code>` | Receive a file. Streams with `Content-Disposition` and `Content-Length`. |
-| `GET` | `/health` | Health check. Returns `ok`. |
-| `GET` | `/` | Web UI. |
-
-## How it works
-
-The server acts as a wormhole client on behalf of the HTTP user. It completes the SPAKE2 key exchange, decrypts/encrypts data, and streams it between the HTTP connection and the wormhole transit connection. The server sees plaintext — if you need end-to-end encryption, use the wormhole CLI directly.
-
-Uploads are true-streaming: body data flows directly from the HTTP request to the wormhole transit connection via a bounded in-memory queue with backpressure. Memory usage is constant (~4MB) regardless of file size. There is no file size limit.
-
-Uses the public Magic Wormhole relay (`relay.magic-wormhole.io`) for signaling and transit. No bundled relay server needed.
-
-## Configuration
+### Configuration
 
 ```
-wormhole-web [OPTIONS]
+wormhole-page-server [OPTIONS]
 
-  --port PORT              Listen port (default: 8080)
-  --transfer-timeout SECONDS  Stall timeout during transfers (default: 120)
+  --port PORT              Listen port (default: 8080, env: PORT)
+  --static-dir DIR         Static files directory (default: static/, env: STATIC_DIR)
+  --transit-relay ADDR     Upstream transit relay (default: transit.magic-wormhole.io:4001, env: TRANSIT_RELAY)
 ```
-
-TLS termination should be handled by a reverse proxy (Caddy, nginx, etc.).
-
-## Horizontal scaling
-
-Multiple instances can run behind a load balancer. Each `PUT /send` is handled by whichever instance receives it. `GET /receive/<code>` is routed to the instance that owns the wormhole code via consistent hashing.
-
-On **Fly.io**, this works automatically using the `fly-replay` header. When a receive request hits the wrong instance, it transparently replays to the correct one. Set `FLY_API_TOKEN` as a secret for machine discovery:
-
-```bash
-flyctl tokens create deploy -a wormhole-web
-flyctl secrets set FLY_API_TOKEN="FlyV1 ..."
-flyctl scale count 4
-```
-
-No shared state between instances. Scale events during active transfers may disrupt ~1/N of in-flight sessions (wormhole codes are short-lived, so the window is small).
 
 ## License
 

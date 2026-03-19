@@ -6,7 +6,7 @@ WASM_OUT = static/wasm
 build: server wasm
 
 server:
-	cargo build --release -p wormhole-web-server
+	cargo build --release -p wormhole-page-server
 
 wasm:
 	cd $(WASM_CRATE) && wasm-pack build --target web --release
@@ -15,7 +15,7 @@ wasm:
 	cp $(WASM_CRATE)/pkg/wormhole_wasm.js $(WASM_OUT)/
 
 run: build
-	./target/release/wormhole-web-server --static-dir static/
+	./target/release/wormhole-page-server --static-dir static/
 
 clean:
 	cargo clean

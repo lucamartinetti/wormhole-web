@@ -1,5 +1,5 @@
 [package]
-name = "wormhole-web-server"
+name = "wormhole-page-server"
 version = "0.1.0"
 edition = "2021"
 
