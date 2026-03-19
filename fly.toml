@@ -11,6 +11,15 @@ primary_region = 'ams'
   auto_start_machines = true
   min_machines_running = 0
 
+# WebSocket transit bridge for WASM E2E encryption
+[[services]]
+  protocol = 'tcp'
+  internal_port = 4002
+
+  [[services.ports]]
+    port = 4002
+    handlers = ['tls', 'http']
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'

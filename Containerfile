@@ -15,7 +15,7 @@ COPY src/ src/
 # Install project
 RUN uv sync --no-dev
 
-EXPOSE 8080
+EXPOSE 8080 4002
 
 ENTRYPOINT ["uv", "run", "wormhole-web"]
-CMD ["--port", "8080"]
+CMD ["--port", "8080", "--transit-port", "4002"]
