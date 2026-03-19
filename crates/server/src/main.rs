@@ -13,7 +13,7 @@ use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::net::TcpStream;
 use tower_http::services::ServeDir;
 
-/// Wormhole Web — E2E encrypted file transfer in the browser.
+/// wormhole.page — E2E encrypted file transfer in the browser.
 #[derive(Parser)]
 struct Args {
     /// Port to listen on
@@ -76,7 +76,7 @@ async fn main() {
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], args.port));
-    tracing::info!("wormhole-web listening on {addr}");
+    tracing::info!("wormhole.page listening on {addr}");
     tracing::info!("transit bridge → {transit_relay}");
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

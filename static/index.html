@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>wormhole-web</title>
+<title>wormhole.page</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 body {
@@ -265,31 +265,6 @@ h1 {
   color: #868e96;
   margin: 0 0 6px;
 }
-.cli-cmd {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f1f3f5;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  padding: 8px 10px;
-}
-.cli-cmd code {
-  flex: 1;
-  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 12px;
-  color: #212529;
-  word-break: break-all;
-}
-.btn-copy-cmd {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #868e96;
-  padding: 2px;
-}
-.btn-copy-cmd:hover { color: #228be6; }
 .cli-links {
   display: flex;
   flex-wrap: wrap;
@@ -302,7 +277,7 @@ h1 {
 </head>
 <body>
 <div class="container">
-  <h1>wormhole-web</h1>
+  <h1>wormhole.page</h1>
   <p class="subtitle">Send and receive files via Magic Wormhole</p>
   <p id="encryption-status" class="warning">Not end-to-end encrypted — the server sees file contents.<br>For E2E encryption, use the <a href="https://magic-wormhole.readthedocs.io/" target="_blank">wormhole CLI</a> directly.</p>
 
@@ -384,38 +359,35 @@ h1 {
     </div>
   </div>
 
-  <!-- CLI & Apps section -->
+  <!-- About section -->
   <details class="cli-section">
-    <summary>CLI commands &amp; apps</summary>
+    <summary>How it works</summary>
     <div class="cli-content">
       <div class="cli-group">
-        <h3>Send via curl</h3>
-        <div class="cli-cmd">
-          <code id="cli-send">curl -T file.tar.gz <span class="cli-host"></span>/send/</code>
-          <button class="btn-copy-cmd" onclick="copyCli('cli-send')" title="Copy">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="cli-group">
-        <h3>Receive via curl</h3>
-        <div class="cli-cmd">
-          <code id="cli-recv">curl -OJ <span class="cli-host"></span>/receive/&lt;code&gt;</code>
-          <button class="btn-copy-cmd" onclick="copyCli('cli-recv')" title="Copy">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          </button>
-        </div>
+        <p style="font-size:13px;color:#495057;line-height:1.5;margin:0 0 12px">
+          <strong>wormhole.page</strong> is a <a href="https://magic-wormhole.readthedocs.io/" target="_blank">Magic Wormhole</a> client
+          that runs entirely in your browser via WebAssembly. Encryption keys are
+          negotiated client-side using SPAKE2 and all data is encrypted with NaCl
+          SecretBox. The server never sees your files.
+        </p>
+        <p style="font-size:13px;color:#495057;line-height:1.5;margin:0 0 12px">
+          Fully interoperable with all Magic Wormhole clients &mdash; send from your
+          browser, receive on the command line, or vice versa.
+        </p>
       </div>
       <div class="cli-group">
         <h3>Compatible apps</h3>
         <div class="cli-links">
-          <a href="https://magic-wormhole.readthedocs.io/" target="_blank">magic-wormhole</a> (Python CLI)
           <a href="https://github.com/magic-wormhole/magic-wormhole.rs" target="_blank">wormhole-rs</a> (Rust CLI)
+          <a href="https://magic-wormhole.readthedocs.io/" target="_blank">magic-wormhole</a> (Python CLI)
           <a href="https://github.com/psanford/wormhole-william" target="_blank">wormhole-william</a> (Go CLI)
           <a href="https://apps.apple.com/app/wormhole-file-transfer/id6753897991" target="_blank">Wormhole File Transfer</a> (iOS)
           <a href="https://play.google.com/store/apps/details?id=io.sanford.wormhole_william" target="_blank">Wormhole William</a> (Android)
           <a href="https://github.com/iyox-studios/iyox-Wormhole" target="_blank">iyox Wormhole</a> (Android)
         </div>
+      </div>
+      <div class="cli-group" style="text-align:center;margin-top:8px">
+        <a href="https://github.com/lucamartinetti/wormhole-web" target="_blank" style="font-size:12px;color:#868e96">Source code on GitHub</a>
       </div>
     </div>
   </details>
@@ -490,7 +462,7 @@ function shareCode() {
   const text = qrModeWeb ? getReceiveUrl() : 'wormhole receive ' + currentCode;
   const data = { text: text };
   if (qrModeWeb) {
-    data.title = 'Receive file via wormhole-web';
+    data.title = 'Receive file via wormhole.page';
     data.url = getReceiveUrl();
   } else {
     data.title = 'Receive file via wormhole';
@@ -767,23 +739,6 @@ document.getElementById('file-input').addEventListener('change', function() {
 
 // Click code box to copy
 document.getElementById('send-code').addEventListener('click', copyCode);
-
-// --- CLI section ---
-// Populate host in CLI commands
-document.querySelectorAll('.cli-host').forEach(el => {
-  el.textContent = window.location.origin;
-});
-
-function copyCli(id) {
-  const el = document.getElementById(id);
-  const text = el.textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = el.parentElement.querySelector('.btn-copy-cmd');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<span style="font-size:12px;color:#228be6">✓</span>';
-    setTimeout(() => { btn.innerHTML = orig; }, 1000);
-  });
-}
 
 // --- WASM initialization ---
 if (window.wasmClient) {
