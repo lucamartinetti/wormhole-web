@@ -42,7 +42,7 @@ Open [wormhole.page](https://wormhole.page) in two tabs (or two devices). Send i
 Requires Rust 1.94+ and wasm-pack.
 
 ```bash
-git clone https://github.com/lucamartinetti/wormhole-web.git
+git clone https://github.com/lucamartinetti/wormhole-page.git
 cd wormhole-web
 make build
 make run
