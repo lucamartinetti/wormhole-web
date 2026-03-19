@@ -280,8 +280,9 @@ def start_transit_relay(reactor, port, host="0.0.0.0"):
     ws_factory.log_requests = False
 
     ep = endpoints.TCP4ServerEndpoint(reactor, port, interface=host)
-    ep.listen(ws_factory)
-    log.msg(f"transit relay (WebSocket) listening on :{port}")
+    d = ep.listen(ws_factory)
+    d.addCallback(lambda _: log.msg(f"transit relay (WebSocket) listening on :{port}"))
+    d.addErrback(lambda f: log.msg(f"transit relay FAILED to start: {f}"))
 
 
 def main():
