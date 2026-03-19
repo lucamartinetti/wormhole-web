@@ -43,47 +43,6 @@ fn relay_hints(bridge_url: &str) -> Vec<transit::RelayHint> {
     ]
 }
 
-/// Map verifier bytes to an emoji pair.
-fn verifier_to_emoji(verifier: &[u8]) -> String {
-    const EMOJI: &[&str] = &[
-        "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
-        "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔",
-        "🐧", "🐦", "🦆", "🦅", "🦉", "🐝", "🐛", "🦋",
-        "🐌", "🐞", "🐜", "🐢", "🐍", "🦎", "🐙", "🦑",
-        "🦐", "🐠", "🐟", "🐡", "🐬", "🦈", "🐳", "🐋",
-        "🐊", "🐆", "🐅", "🐃", "🦬", "🐂", "🐄", "🐪",
-        "🐫", "🦙", "🐘", "🦣", "🦏", "🦛", "🐐", "🐏",
-        "🐑", "🐎", "🐴", "🦌", "🦘", "🦥", "🦡", "🐿",
-        "🦫", "🦨", "🦦", "🦝", "🐓", "🦃", "🦤", "🦚",
-        "🦜", "🦢", "🦩", "🐇", "🦔", "🐉", "🌸", "🌺",
-        "🌻", "🌹", "🌷", "🌼", "🌾", "🍀", "🍁", "🍂",
-        "🍃", "🌿", "🪴", "🌵", "🌴", "🎋", "🎍", "🪻",
-        "🍄", "🌰", "🎃", "🌈", "⭐", "🌙", "☀️", "⛅",
-        "🌊", "❄️", "🔥", "💧", "🍎", "🍊", "🍋", "🍌",
-        "🍉", "🍇", "🍓", "🫐", "🍒", "🍑", "🥭", "🍍",
-        "🥝", "🍅", "🌽", "🥕", "🥑", "🫑", "🌶", "🧄",
-        "🧅", "🥔", "🍞", "🥐", "🧀", "🥚", "🍳", "🧈",
-        "🥞", "🧇", "🍕", "🍔", "🍟", "🌭", "🍿", "🧂",
-        "🍩", "🍪", "🎂", "🍰", "🧁", "🍫", "🍬", "🍭",
-        "☕", "🍵", "🧃", "🧊", "🎵", "🎶", "🎸", "🎹",
-        "🥁", "🎺", "🎻", "🎲", "🎯", "🎳", "🎮", "🕹",
-        "🧩", "🎪", "🎨", "🖌", "🔮", "🧿", "🪄", "🎩",
-        "📷", "💡", "🔑", "🗝", "🧲", "🪜", "🛠", "⚙️",
-        "🧰", "🔧", "🔨", "⛏", "🪓", "🗡", "🛡", "🏹",
-        "🚀", "🛸", "🌍", "🗺", "🧭", "⛵", "🚂", "🚁",
-        "🎈", "🎉", "🎊", "🎁", "🏆", "🥇", "🏅", "⚽",
-        "🏀", "🏈", "⚾", "🎾", "🏐", "🏓", "🥊", "⛳",
-        "🎣", "🤿", "🎿", "🛷", "🪁", "🏄", "🚴", "🧗",
-        "💎", "👑", "🧸", "🪆", "🎭", "🎤", "📚", "🔬",
-        "🔭", "💻", "🖥", "📱", "⌚", "🕰", "⏳", "🧬",
-        "🪐", "🌋", "🏔", "🏝", "🌄", "🌅", "🏰", "🗽",
-        "🎡", "🎢", "⛲", "🌁", "🏗", "🛤", "🌉", "🗼",
-    ];
-    let a = verifier.first().copied().unwrap_or(0) as usize;
-    let b = verifier.get(1).copied().unwrap_or(0) as usize;
-    format!("{} {}", EMOJI[a % EMOJI.len()], EMOJI[b % EMOJI.len()])
-}
-
 /// File metadata from a wormhole offer.
 #[wasm_bindgen]
 pub struct FileOffer {
@@ -181,7 +140,6 @@ pub struct WormholeSender {
     code: String,
     mailbox: Option<MailboxConnection<AppVersion>>,
     transit_relay_url: String,
-    verifier_bytes: Option<Vec<u8>>,
     conn_type: Option<String>,
     chunk_tx: Option<mpsc::Sender<Vec<u8>>>,
     done_rx: Option<oneshot::Receiver<Result<(), String>>>,
@@ -206,7 +164,6 @@ impl WormholeSender {
             code,
             mailbox: Some(mailbox),
             transit_relay_url: transit_relay_url.to_string(),
-            verifier_bytes: None,
             conn_type: None,
             chunk_tx: None,
             done_rx: None,
@@ -217,12 +174,6 @@ impl WormholeSender {
     #[wasm_bindgen]
     pub fn code(&self) -> String {
         self.code.clone()
-    }
-
-    /// Get the verification emoji pair (available after negotiate).
-    #[wasm_bindgen]
-    pub fn verifier(&self) -> Option<String> {
-        self.verifier_bytes.as_ref().map(|v| verifier_to_emoji(v))
     }
 
     /// Get connection type: "direct" or "relayed" (available after negotiate).
@@ -250,8 +201,6 @@ impl WormholeSender {
             .await
             .map_err(|e| JsError::new(&format!("Key exchange failed: {e}")))?;
 
-        // Store verifier before we consume wormhole
-        self.verifier_bytes = Some(AsRef::<[u8]>::as_ref(wormhole.verifier()).to_vec());
         web_sys::console::log_1(&"[wormhole] SPAKE2 complete, starting file transfer...".into());
 
         // Create channel for streaming chunks from JS to Rust
@@ -364,7 +313,6 @@ impl WormholeSender {
 pub struct WormholeReceiver {
     mailbox: Option<MailboxConnection<AppVersion>>,
     transit_relay_url: String,
-    verifier_bytes: Option<Vec<u8>>,
     conn_type: Option<String>,
     receive_request: Option<transfer::ReceiveRequest>,
     chunk_rx: Option<mpsc::UnboundedReceiver<Vec<u8>>>,
@@ -390,18 +338,11 @@ impl WormholeReceiver {
         Ok(WormholeReceiver {
             mailbox: Some(mailbox),
             transit_relay_url: transit_relay_url.to_string(),
-            verifier_bytes: None,
             conn_type: None,
             receive_request: None,
             chunk_rx: None,
             done_rx: None,
         })
-    }
-
-    /// Get the verification emoji pair (available after negotiate).
-    #[wasm_bindgen]
-    pub fn verifier(&self) -> Option<String> {
-        self.verifier_bytes.as_ref().map(|v| verifier_to_emoji(v))
     }
 
     /// Get connection type (available after accept).
@@ -424,7 +365,6 @@ impl WormholeReceiver {
             .await
             .map_err(|e| JsError::new(&format!("Key exchange failed: {e}")))?;
 
-        self.verifier_bytes = Some(AsRef::<[u8]>::as_ref(wormhole.verifier()).to_vec());
         web_sys::console::log_1(&"[wormhole] SPAKE2 complete, waiting for file offer...".into());
 
         let relay = relay_hints(&self.transit_relay_url);
