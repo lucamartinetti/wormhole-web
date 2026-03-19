@@ -82,6 +82,22 @@ wormhole-page-server [OPTIONS]
   --transit-relay ADDR     Upstream transit relay (default: transit.magic-wormhole.io:4001, env: TRANSIT_RELAY)
 ```
 
+#### Client-side overrides
+
+The WASM client reads optional globals from `window` before connecting. Set them in a `<script>` tag before the app loads:
+
+```html
+<script>
+  window.WORMHOLE_TRANSIT_RELAY = 'wss://my-relay.example.com/transit';
+  window.WORMHOLE_MAILBOX_URL   = 'wss://my-mailbox.example.com/v1';
+</script>
+```
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `WORMHOLE_TRANSIT_RELAY` | `wss://<host>/transit` | WebSocket URL for the transit relay bridge |
+| `WORMHOLE_MAILBOX_URL` | `wss://relay.magic-wormhole.io:443/v1` | Mailbox (rendezvous) relay for SPAKE2 key exchange |
+
 ## License
 
 MIT

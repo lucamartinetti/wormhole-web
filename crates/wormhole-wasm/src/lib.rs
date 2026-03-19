@@ -13,13 +13,18 @@ pub fn init() {
     console_error_panic_hook::set_once();
 }
 
-/// Use WSS for the mailbox relay — browsers block mixed content (WS from HTTPS page).
-const RENDEZVOUS_SERVER: &str = "wss://relay.magic-wormhole.io:443/v1";
+/// Default mailbox relay URL — WSS so browsers don't block mixed content.
+const DEFAULT_MAILBOX_URL: &str = "wss://relay.magic-wormhole.io:443/v1";
 
-fn app_config() -> AppConfig<AppVersion> {
+fn app_config(mailbox_url: &str) -> AppConfig<AppVersion> {
+    let url = if mailbox_url.is_empty() {
+        DEFAULT_MAILBOX_URL
+    } else {
+        mailbox_url
+    };
     transfer::APP_CONFIG
         .clone()
-        .rendezvous_url(std::borrow::Cow::Borrowed(RENDEZVOUS_SERVER))
+        .rendezvous_url(std::borrow::Cow::Owned(url.to_string()))
 }
 
 /// Default public transit relay (TCP). The CLI peer will connect here directly.
@@ -150,10 +155,11 @@ impl WormholeSender {
     /// Allocate a code and connect to the mailbox relay.
     /// Returns immediately with the code — does NOT wait for receiver.
     /// transit_relay_url: WebSocket URL for the transit relay (e.g. "ws://localhost:4002")
+    /// mailbox_url: Mailbox relay URL (empty string uses default)
     #[wasm_bindgen]
-    pub async fn create(transit_relay_url: &str) -> Result<WormholeSender, JsError> {
+    pub async fn create(transit_relay_url: &str, mailbox_url: &str) -> Result<WormholeSender, JsError> {
         web_sys::console::log_1(&"[wormhole] connecting to mailbox relay...".into());
-        let config = app_config();
+        let config = app_config(mailbox_url);
         let mailbox = MailboxConnection::create(config, 2)
             .await
             .map_err(|e| JsError::new(&format!("Failed to connect to relay: {e}")))?;
@@ -323,10 +329,11 @@ pub struct WormholeReceiver {
 impl WormholeReceiver {
     /// Connect to mailbox relay with the given code.
     /// transit_relay_url: WebSocket URL for the transit relay (e.g. "ws://localhost:4002")
+    /// mailbox_url: Mailbox relay URL (empty string uses default)
     #[wasm_bindgen]
-    pub async fn create(code: &str, transit_relay_url: &str) -> Result<WormholeReceiver, JsError> {
+    pub async fn create(code: &str, transit_relay_url: &str, mailbox_url: &str) -> Result<WormholeReceiver, JsError> {
         web_sys::console::log_1(&format!("[wormhole] connecting to mailbox with code: {code}").into());
-        let config = app_config();
+        let config = app_config(mailbox_url);
         let code: Code = code
             .parse()
             .map_err(|_| JsError::new("Invalid wormhole code"))?;

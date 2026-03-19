@@ -114,6 +114,9 @@ function sanitizeFilename(name) {
 const TRANSIT_RELAY_URL = window.WORMHOLE_TRANSIT_RELAY ||
   ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/transit');
 
+// Mailbox relay URL — defaults to the public Magic Wormhole relay
+const MAILBOX_URL = window.WORMHOLE_MAILBOX_URL || 'wss://relay.magic-wormhole.io:443/v1';
+
 // --- WASM Send ---
 async function wasmSend(file, callbacks) {
   const { onCode, onProgress, onStatus, onError, onComplete } = callbacks;
@@ -121,7 +124,7 @@ async function wasmSend(file, callbacks) {
   let sender = null;
   try {
     onStatus('allocating code...');
-    sender = await wasm.WormholeSender.create(TRANSIT_RELAY_URL);
+    sender = await wasm.WormholeSender.create(TRANSIT_RELAY_URL, MAILBOX_URL);
     activeSender = sender;
     const code = sender.code();
     onCode(code);
@@ -165,7 +168,7 @@ async function wasmReceive(code, callbacks) {
   let receiver = null;
   try {
     onStatus('establishing encrypted connection...');
-    receiver = await wasm.WormholeReceiver.create(code, TRANSIT_RELAY_URL);
+    receiver = await wasm.WormholeReceiver.create(code, TRANSIT_RELAY_URL, MAILBOX_URL);
     activeReceiver = receiver;
 
     onStatus('waiting for file offer...');
