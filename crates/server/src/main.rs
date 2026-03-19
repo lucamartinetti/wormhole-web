@@ -4,7 +4,7 @@ use axum::{
         State,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
-    http::StatusCode,
+    http::{StatusCode, header::{HeaderName, HeaderValue}},
     response::{Html, IntoResponse},
 };
 use clap::Parser;
@@ -73,6 +73,7 @@ async fn main() {
         .nest_service("/static", static_service)
         // Root serves index.html
         .fallback(axum::routing::get(root_or_404))
+        .layer(axum::middleware::from_fn(security_headers))
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], args.port));
@@ -81,6 +82,40 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+/// Middleware that adds security headers to every response.
+async fn security_headers(
+    req: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> impl IntoResponse {
+    let mut response = next.run(req).await;
+    let headers = response.headers_mut();
+    headers.insert(
+        HeaderName::from_static("content-security-policy"),
+        HeaderValue::from_static("default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' wss://relay.magic-wormhole.io ws: wss:; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
+    );
+    headers.insert(
+        HeaderName::from_static("x-content-type-options"),
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        HeaderName::from_static("x-frame-options"),
+        HeaderValue::from_static("DENY"),
+    );
+    headers.insert(
+        HeaderName::from_static("strict-transport-security"),
+        HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+    );
+    headers.insert(
+        HeaderName::from_static("referrer-policy"),
+        HeaderValue::from_static("no-referrer"),
+    );
+    headers.insert(
+        HeaderName::from_static("permissions-policy"),
+        HeaderValue::from_static("camera=(), microphone=(), geolocation=()"),
+    );
+    response
 }
 
 /// GET /health
