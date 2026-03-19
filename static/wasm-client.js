@@ -46,7 +46,7 @@ async function initWasm() {
 
       // The JS glue is integrity-checked via <link rel="modulepreload">
       const mod = await import('/static/wasm/wormhole_wasm.js');
-      await mod.default(new WebAssembly.Module(wasmBytes));
+      await mod.default({ module_or_path: new WebAssembly.Module(wasmBytes) });
       wasm = mod;
     } else {
       // No SRI hash injected (dev mode) — load without verification
