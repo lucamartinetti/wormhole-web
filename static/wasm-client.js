@@ -66,7 +66,7 @@ function updateEncryptionBadge() {
   const el = document.getElementById('encryption-status');
   if (!el) return;
   if (wasmReady) {
-    el.textContent = 'End-to-end encrypted';
+    el.textContent = '\uD83D\uDD12 End-to-end encrypted';
     el.classList.remove('warning');
     el.classList.add('encrypted');
   } else {
