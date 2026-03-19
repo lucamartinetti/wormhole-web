@@ -165,6 +165,7 @@ async function wasmReceive(code, callbacks) {
     }
 
     let received = 0;
+    console.log('[wormhole] JS: starting receive loop');
     while (true) {
       const chunk = await receiver.receive_chunk();
       if (chunk.length === 0) break;
@@ -181,7 +182,8 @@ async function wasmReceive(code, callbacks) {
           throw e;
         }
       } else {
-        chunks.push(new Uint8Array(chunk));
+        // Copy chunk — the WASM Uint8Array may reference freed memory after next call
+        chunks.push(new Uint8Array(chunk).slice());
       }
 
       received += chunk.length;
