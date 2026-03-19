@@ -311,14 +311,17 @@ impl WormholeSender {
     }
 
     /// Send one chunk of file data. Call this repeatedly with the file contents.
+    /// Awaits if the internal buffer is full (backpressure).
     #[wasm_bindgen]
     pub async fn send_chunk(&mut self, data: &[u8]) -> Result<(), JsError> {
+        use futures::SinkExt;
         let tx = self
             .chunk_tx
             .as_mut()
             .ok_or_else(|| JsError::new("Not negotiated or already finished"))?;
 
-        tx.try_send(data.to_vec())
+        tx.send(data.to_vec())
+            .await
             .map_err(|e| JsError::new(&format!("Send failed: {e}")))?;
 
         Ok(())
