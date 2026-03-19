@@ -4,294 +4,42 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>wormhole.page</title>
-<style>
-*, *::before, *::after { box-sizing: border-box; }
-body {
-  font-family: system-ui, -apple-system, sans-serif;
-  background: #fafafa;
-  color: #212529;
-  margin: 0;
-  padding: 20px;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 10vh;
-}
-.container {
-  width: 100%;
-  max-width: 480px;
-}
-h1 {
-  text-align: center;
-  font-size: 24px;
-  margin: 0 0 4px;
-}
-.subtitle {
-  text-align: center;
-  color: #868e96;
-  font-size: 14px;
-  margin: 0 0 12px;
-}
-.warning {
-  text-align: center;
-  font-size: 12px;
-  color: #868e96;
-  margin: 0 0 24px;
-  line-height: 1.4;
-}
-.warning a { color: #228be6; }
-.encrypted {
-  text-align: center;
-  font-size: 12px;
-  color: #868e96;
-  margin: 0 0 24px;
-  line-height: 1.4;
-}
-.verifier {
-  text-align: center;
-  font-size: 24px;
-  margin: 8px 0;
-  letter-spacing: 4px;
-}
-.verifier.small {
-  font-size: 16px;
-  color: #868e96;
-  margin: 4px 0;
-}
-.transfer-info {
-  text-align: center;
-  color: #868e96;
-  font-size: 13px;
-  margin-top: 4px;
-}
-.dropzone {
-  border: 2px dashed #ced4da;
-  border-radius: 12px;
-  padding: 40px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-  color: #868e96;
-  font-size: 15px;
-}
-.dropzone:hover, .dropzone.dragover {
-  border-color: #228be6;
-  background: #f0f7ff;
-}
-.dropzone input { display: none; }
-.divider {
-  text-align: center;
-  color: #adb5bd;
-  font-size: 13px;
-  margin: 20px 0;
-}
-.receive-row {
-  display: flex;
-  gap: 8px;
-}
-.receive-row input {
-  flex: 1;
-  padding: 10px 14px;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  font-size: 15px;
-  outline: none;
-}
-.receive-row input:focus { border-color: #228be6; }
-.btn {
-  padding: 10px 20px;
-  background: #228be6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.btn:hover { background: #1c7ed6; }
-.btn:disabled { background: #adb5bd; cursor: default; }
-.btn-cancel {
-  background: none;
-  color: #868e96;
-  border: 1px solid #ced4da;
-  margin-top: 8px;
-  width: 100%;
-}
-.btn-cancel:hover { background: #f1f3f5; color: #495057; }
-
-/* Send status panel */
-.send-status {
-  border: 2px solid #228be6;
-  border-radius: 12px;
-  padding: 20px;
-  background: #f8f9fa;
-}
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.file-icon { width: 24px; height: 24px; color: #868e96; flex-shrink: 0; }
-.file-name { font-weight: 600; font-size: 14px; }
-.file-size { color: #868e96; font-size: 12px; }
-.code-box {
-  background: #f1f3f5;
-  color: #212529;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 12px;
-  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 14px;
-  text-align: center;
-  margin-bottom: 14px;
-  user-select: all;
-  cursor: pointer;
-}
-.code-box:hover { background: #e9ecef; }
-.code-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-.btn-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: none;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #495057;
-  cursor: pointer;
-}
-.btn-action:hover { background: #f1f3f5; }
-.mode-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 0;
-  margin-bottom: 12px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.mode-tab {
-  flex: 1;
-  padding: 6px 0;
-  border: none;
-  background: #f8f9fa;
-  font-size: 13px;
-  color: #868e96;
-  cursor: pointer;
-}
-.mode-tab:not(:last-child) { border-right: 1px solid #ced4da; }
-.mode-tab:hover { background: #e9ecef; }
-.mode-tab.active {
-  background: #228be6;
-  color: white;
-}
-.qr-container { text-align: center; margin-bottom: 14px; }
-.qr-container canvas, .qr-container img { margin: 0 auto; }
-.progress-track {
-  background: #e9ecef;
-  border-radius: 4px;
-  height: 6px;
-  margin-bottom: 6px;
-  overflow: hidden;
-}
-.progress-bar {
-  background: #228be6;
-  height: 100%;
-  border-radius: 4px;
-  width: 0%;
-  transition: width 0.2s;
-}
-.progress-bar.done { background: #228be6; }
-.status-text {
-  text-align: center;
-  color: #868e96;
-  font-size: 13px;
-}
-.status-text.error { color: #e03131; }
-.status-text.done { color: #212529; font-weight: 600; }
-
-/* Receive status */
-.receive-status {
-  text-align: center;
-  padding: 20px;
-  border: 1px solid #ced4da;
-  border-radius: 12px;
-}
-.spinner {
-  display: inline-block;
-  width: 20px; height: 20px;
-  border: 2px solid #e9ecef;
-  border-top-color: #228be6;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.hidden { display: none; }
-
-/* CLI & Apps section */
-.cli-section {
-  margin-top: 32px;
-  border-top: 1px solid #e9ecef;
-  padding-top: 16px;
-}
-.cli-section summary {
-  cursor: pointer;
-  text-align: center;
-  color: #868e96;
-  font-size: 13px;
-  list-style: none;
-  user-select: none;
-}
-.cli-section summary::-webkit-details-marker { display: none; }
-.cli-section summary::before { content: "▸ "; }
-.cli-section[open] summary::before { content: "▾ "; }
-.cli-content { margin-top: 16px; }
-.cli-group { margin-bottom: 16px; }
-.cli-group h3 {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #868e96;
-  margin: 0 0 6px;
-}
-.cli-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  font-size: 13px;
-}
-.cli-links a { color: #228be6; text-decoration: none; }
-.cli-links a:hover { text-decoration: underline; }
-</style>
+<meta name="description" content="End-to-end encrypted file transfer in the browser. Drop a file, share the code, done.">
+<meta property="og:title" content="wormhole.page">
+<meta property="og:description" content="End-to-end encrypted file transfer. No accounts, no tracking, no server access to your files.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wormhole.page">
+<meta property="og:image" content="https://wormhole.page/static/og-image.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="wormhole.page">
+<meta name="twitter:description" content="End-to-end encrypted file transfer. No accounts, no tracking.">
+<meta name="theme-color" content="#228be6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1b1e" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="container">
   <h1>wormhole.page</h1>
+  <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="Switch to dark mode" role="switch" aria-checked="false">
+    <svg id="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg id="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
   <p class="subtitle">Send and receive files via Magic Wormhole</p>
-  <p id="encryption-status" class="warning">Not end-to-end encrypted — the server sees file contents.<br>For E2E encryption, use the <a href="https://magic-wormhole.readthedocs.io/" target="_blank">wormhole CLI</a> directly.</p>
+  <p id="encryption-status" class="warning">Your browser does not support WebAssembly. Use a modern browser or the wormhole CLI.</p>
 
   <!-- Send: initial state -->
   <div id="send-initial">
-    <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Drop a file here or click to browse">
       Drop a file here or click to browse
-      <input type="file" id="file-input" accept="*/*">
+      <input type="file" id="file-input" accept="*/*" aria-label="Select file to send">
     </div>
   </div>
 
   <!-- Send: status state -->
   <div id="send-status" class="hidden">
-    <div class="send-status">
+    <div class="send-status" aria-live="polite">
       <div class="file-info">
         <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <div>
@@ -302,28 +50,28 @@ h1 {
       <div id="send-code-section" class="hidden">
         <div class="code-box" id="send-code"></div>
         <div class="code-actions">
-          <button class="btn-action" id="btn-copy" onclick="copyCode()" title="Copy">
+          <button class="btn-action" id="btn-copy" onclick="copyCode()" title="Copy" aria-label="Copy code to clipboard">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             <span id="copy-label">Copy</span>
           </button>
-          <button class="btn-action" id="btn-share" onclick="shareCode()" title="Share" style="display:none">
+          <button class="btn-action" id="btn-share" onclick="shareCode()" title="Share" aria-label="Share code" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             <span>Share</span>
           </button>
         </div>
-        <div class="mode-tabs">
-          <button class="mode-tab active" id="tab-web" onclick="setQrMode(true)">Web</button>
-          <button class="mode-tab" id="tab-wormhole" onclick="setQrMode(false)">Wormhole</button>
+        <div class="mode-tabs" role="tablist">
+          <button class="mode-tab active" id="tab-web" onclick="setQrMode(true)" role="tab" aria-selected="true">Web</button>
+          <button class="mode-tab" id="tab-wormhole" onclick="setQrMode(false)" role="tab" aria-selected="false">Wormhole</button>
         </div>
         <div class="qr-container">
-          <div id="qr-display"></div>
+          <div id="qr-display" role="img" aria-label="QR code for receive link"></div>
         </div>
       </div>
-      <div id="send-verifier" class="verifier hidden"></div>
-      <div class="progress-track"><div class="progress-bar" id="send-progress"></div></div>
-      <div class="status-text" id="send-status-text">allocating code...</div>
+      <svg class="checkmark-icon" id="send-checkmark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none;margin:0 auto 6px"><polyline points="20 6 9 17 4 12"/></svg>
+      <div class="progress-track"><div class="progress-bar" id="send-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
+      <div class="status-text" id="send-status-text" aria-live="polite">allocating code...</div>
       <div id="send-transfer-info" class="transfer-info hidden"></div>
-      <button class="btn btn-cancel" onclick="cancelSend()">Cancel</button>
+      <button class="btn btn-cancel" id="send-cancel-btn" onclick="cancelSend()">Cancel</button>
     </div>
   </div>
 
@@ -332,7 +80,7 @@ h1 {
   <!-- Receive: initial state -->
   <div id="receive-initial">
     <div class="receive-row">
-      <input type="text" id="receive-code" placeholder="Enter wormhole code"
+      <input type="text" id="receive-code" placeholder="Enter wormhole code" aria-label="Wormhole code"
              onkeydown="if(event.key==='Enter')startReceive()">
       <button class="btn" onclick="startReceive()">Receive</button>
     </div>
@@ -340,7 +88,7 @@ h1 {
 
   <!-- Receive: status state -->
   <div id="receive-status" class="hidden">
-    <div class="receive-status">
+    <div class="receive-status" aria-live="polite">
       <div id="receive-file-info" class="file-info hidden">
         <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <div>
@@ -348,14 +96,14 @@ h1 {
           <div class="file-size" id="receive-filesize"></div>
         </div>
       </div>
-      <div id="receive-verifier" class="verifier hidden"></div>
       <div id="receive-progress-section" class="hidden">
-        <div class="progress-track"><div class="progress-bar" id="receive-progress"></div></div>
+        <div class="progress-track"><div class="progress-bar" id="receive-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
       </div>
+      <svg class="checkmark-icon" id="receive-checkmark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none;margin:0 auto 6px"><polyline points="20 6 9 17 4 12"/></svg>
       <div id="receive-spinner" class=""><span class="spinner"></span></div>
-      <span id="receive-status-text">starting download...</span>
+      <span id="receive-status-text" aria-live="polite">starting download...</span>
       <div id="receive-transfer-info" class="transfer-info hidden"></div>
-      <button class="btn btn-cancel" onclick="cancelReceive()">Cancel</button>
+      <button class="btn btn-cancel" id="receive-cancel-btn" onclick="cancelReceive()">Cancel</button>
     </div>
   </div>
 
@@ -364,13 +112,13 @@ h1 {
     <summary>How it works</summary>
     <div class="cli-content">
       <div class="cli-group">
-        <p style="font-size:13px;color:#495057;line-height:1.5;margin:0 0 12px">
+        <p style="font-size:13px;color:var(--text-primary);line-height:1.5;margin:0 0 12px">
           <strong>wormhole.page</strong> is a <a href="https://magic-wormhole.readthedocs.io/" target="_blank">Magic Wormhole</a> client
           that runs entirely in your browser via WebAssembly. Encryption keys are
           negotiated client-side using SPAKE2 and all data is encrypted with NaCl
           SecretBox. The server never sees your files.
         </p>
-        <p style="font-size:13px;color:#495057;line-height:1.5;margin:0 0 12px">
+        <p style="font-size:13px;color:var(--text-primary);line-height:1.5;margin:0 0 12px">
           Fully interoperable with all Magic Wormhole clients &mdash; send from your
           browser, receive on the command line, or vice versa.
         </p>
@@ -387,7 +135,7 @@ h1 {
         </div>
       </div>
       <div class="cli-group" style="text-align:center;margin-top:8px">
-        <a href="https://github.com/lucamartinetti/wormhole-page" target="_blank" style="font-size:12px;color:#868e96">Source code on GitHub</a>
+        <a href="https://github.com/lucamartinetti/wormhole-page" target="_blank" style="font-size:12px;color:var(--text-secondary)">Source code on GitHub</a>
       </div>
     </div>
   </details>
@@ -397,9 +145,17 @@ h1 {
 <script src="/static/wasm-client.js"></script>
 <script>
 // --- State ---
-let sendXhr = null;
 let currentCode = null;
 let qrModeWeb = true; // true = web URL, false = wormhole-transfer:
+let transferActive = false;
+
+// --- Beforeunload warning ---
+window.addEventListener('beforeunload', function(e) {
+  if (transferActive) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 // --- Helpers ---
 function formatSize(bytes) {
@@ -411,6 +167,37 @@ function formatSize(bytes) {
 
 function show(id) { document.getElementById(id).classList.remove('hidden'); }
 function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+// --- Dark Mode Toggle ---
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : (current === 'light' ? 'dark' :
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'));
+  html.setAttribute('data-theme', next);
+  updateThemeToggle(next === 'dark');
+  try { localStorage.setItem('theme', next); } catch (_) {}
+}
+
+function updateThemeToggle(isDark) {
+  document.getElementById('theme-icon-sun').style.display = isDark ? 'none' : '';
+  document.getElementById('theme-icon-moon').style.display = isDark ? '' : 'none';
+  const btn = document.getElementById('theme-toggle');
+  btn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+  btn.setAttribute('aria-checked', String(isDark));
+}
+
+// Initialize theme
+(function() {
+  let theme;
+  try { theme = localStorage.getItem('theme'); } catch (_) {}
+  if (theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    updateThemeToggle(theme === 'dark');
+  } else {
+    updateThemeToggle(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+})();
 
 // --- QR ---
 function renderQr(text) {
@@ -441,6 +228,8 @@ function setQrMode(web) {
   qrModeWeb = web;
   document.getElementById('tab-web').classList.toggle('active', web);
   document.getElementById('tab-wormhole').classList.toggle('active', !web);
+  document.getElementById('tab-web').setAttribute('aria-selected', String(web));
+  document.getElementById('tab-wormhole').setAttribute('aria-selected', String(!web));
   if (web) {
     renderQr(getReceiveUrl());
   } else {
@@ -472,11 +261,11 @@ function shareCode() {
 
 // --- Send ---
 function startSend(file) {
-  if (window.wasmClient && window.wasmClient.ready) {
-    startSendWasm(file);
-  } else {
-    startSendXhr(file);
+  if (!window.wasmClient || !window.wasmClient.ready) {
+    // WASM not loaded -- can't proceed
+    return;
   }
+  startSendWasm(file);
 }
 
 function startSendWasm(file) {
@@ -489,9 +278,15 @@ function startSendWasm(file) {
   document.getElementById('send-status-text').className = 'status-text';
   document.getElementById('send-progress').style.width = '0%';
   document.getElementById('send-progress').className = 'progress-bar';
+  document.getElementById('send-progress').setAttribute('aria-valuenow', '0');
   hide('send-code-section');
-  hide('send-verifier');
   hide('send-transfer-info');
+
+  // Reset checkmark
+  var check = document.getElementById('send-checkmark');
+  if (check) { check.style.display = 'none'; check.classList.remove('animate'); }
+
+  document.getElementById('send-status-text').focus();
 
   window.wasmClient.send(file, {
     onCode(code) {
@@ -502,152 +297,101 @@ function startSendWasm(file) {
         document.getElementById('btn-share').style.display = '';
       }
     },
-    onVerifier(emoji) {
-      document.getElementById('send-verifier').textContent = emoji;
-      show('send-verifier');
-    },
     onStatus(text) {
       document.getElementById('send-status-text').textContent = text;
     },
     onProgress(pct, speed, connType) {
+      transferActive = true;
       document.getElementById('send-progress').style.width = pct + '%';
+      document.getElementById('send-progress').setAttribute('aria-valuenow', String(pct));
       if (speed) {
-        const info = speed + (connType ? ' \u00b7 ' + connType : '');
+        var info = speed + (connType ? ' \u00b7 ' + connType : '');
         document.getElementById('send-transfer-info').textContent = info;
         show('send-transfer-info');
       }
     },
     onError(msg) {
+      transferActive = false;
       document.getElementById('send-status-text').textContent = msg;
       document.getElementById('send-status-text').className = 'status-text error';
-      hide('send-verifier');
+      var btn = document.getElementById('send-cancel-btn');
+      btn.textContent = 'New Transfer';
+      btn.className = 'btn';
+      btn.style.width = '100%';
+      btn.style.marginTop = '8px';
+      btn.focus();
     },
     onComplete() {
+      transferActive = false;
       markSendComplete();
     },
   });
-}
-
-function startSendXhr(file) {
-  hide('send-initial');
-  show('send-status');
-
-  document.getElementById('send-filename').textContent = file.name;
-  document.getElementById('send-filesize').textContent = formatSize(file.size);
-  document.getElementById('send-status-text').textContent = 'uploading...';
-  document.getElementById('send-status-text').className = 'status-text';
-  document.getElementById('send-progress').style.width = '0%';
-  document.getElementById('send-progress').className = 'progress-bar';
-  hide('send-code-section');
-  hide('send-verifier');
-  hide('send-transfer-info');
-
-  const xhr = new XMLHttpRequest();
-  sendXhr = xhr;
-
-  xhr.upload.onprogress = function(e) {
-    if (e.lengthComputable) {
-      const pct = Math.round((e.loaded / e.total) * 100);
-      document.getElementById('send-progress').style.width = pct + '%';
-    }
-  };
-
-  let lastResponseLen = 0;
-  xhr.onprogress = function() {
-    const text = xhr.responseText.substring(lastResponseLen);
-    lastResponseLen = xhr.responseText.length;
-    const lines = text.split('\n').filter(l => l.trim());
-    for (const line of lines) {
-      if (line.startsWith('wormhole receive ')) {
-        currentCode = line.substring('wormhole receive '.length).trim();
-        show('send-code-section');
-        setQrMode(true);
-        if (navigator.share) {
-          document.getElementById('btn-share').style.display = '';
-        }
-        document.getElementById('send-status-text').textContent = 'waiting for receiver...';
-      } else if (line.startsWith('waiting for receiver')) {
-        document.getElementById('send-status-text').textContent = 'waiting for receiver...';
-      } else if (line.startsWith('transferring')) {
-        document.getElementById('send-status-text').textContent = 'transferring...';
-      } else if (line.startsWith('transfer complete')) {
-        markSendComplete();
-      } else if (line.startsWith('error:')) {
-        document.getElementById('send-status-text').textContent = line;
-        document.getElementById('send-status-text').className = 'status-text error';
-      }
-    }
-  };
-
-  xhr.onload = function() {
-    sendXhr = null;
-    if (xhr.status !== 200) {
-      document.getElementById('send-status-text').textContent = 'Error: server returned ' + xhr.status;
-      document.getElementById('send-status-text').className = 'status-text error';
-      return;
-    }
-    const lines = xhr.responseText.split('\n');
-    for (const line of lines) {
-      if (line.startsWith('wormhole receive ') && !currentCode) {
-        currentCode = line.substring('wormhole receive '.length).trim();
-        show('send-code-section');
-        setQrMode(true);
-      }
-    }
-    if (xhr.responseText.includes('transfer complete')) {
-      markSendComplete();
-    }
-  };
-
-  xhr.onerror = function() {
-    sendXhr = null;
-    document.getElementById('send-status-text').textContent = 'Connection error';
-    document.getElementById('send-status-text').className = 'status-text error';
-  };
-
-  xhr.open('PUT', '/send');
-  xhr.setRequestHeader('X-Wormhole-Filename', file.name);
-  xhr.send(file);
 }
 
 function markSendComplete() {
   hide('send-code-section');
   document.getElementById('send-progress').style.width = '100%';
   document.getElementById('send-progress').className = 'progress-bar done';
+  document.getElementById('send-progress').setAttribute('aria-valuenow', '100');
   document.getElementById('send-status-text').textContent = 'Transfer complete!';
   document.getElementById('send-status-text').className = 'status-text done';
+  // Show checkmark
+  var check = document.getElementById('send-checkmark');
+  if (check) { check.style.display = 'block'; check.classList.add('animate'); }
+  // Change cancel to New Transfer with primary style
+  var btn = document.getElementById('send-cancel-btn');
+  btn.textContent = 'New Transfer';
+  btn.className = 'btn';
+  btn.style.width = '100%';
+  btn.style.marginTop = '8px';
+  btn.focus();
 }
 
 function cancelSend() {
-  if (sendXhr) { sendXhr.abort(); sendXhr = null; }
+  transferActive = false;
   currentCode = null;
   hide('send-status');
   show('send-initial');
   document.getElementById('file-input').value = '';
+  // Reset button
+  var btn = document.getElementById('send-cancel-btn');
+  btn.textContent = 'Cancel';
+  btn.className = 'btn btn-cancel';
+  btn.style.width = '';
+  btn.style.marginTop = '';
+  // Reset checkmark
+  var check = document.getElementById('send-checkmark');
+  if (check) { check.style.display = 'none'; check.classList.remove('animate'); }
+  // Update progress bar ARIA
+  var prog = document.getElementById('send-progress');
+  if (prog) prog.setAttribute('aria-valuenow', '0');
 }
 
 // --- Receive ---
 function startReceive() {
-  const input = document.getElementById('receive-code');
-  const code = input.value.trim();
+  var input = document.getElementById('receive-code');
+  var code = input.value.trim().toLowerCase().replace(/\s+/g, '');
   if (!code) return;
-
-  if (window.wasmClient && window.wasmClient.ready) {
-    startReceiveWasm(code);
-  } else {
-    startReceiveXhr(code);
-  }
+  input.value = code; // show normalized code
+  if (!window.wasmClient || !window.wasmClient.ready) return;
+  startReceiveWasm(code);
 }
 
 function startReceiveWasm(code) {
   hide('receive-initial');
   show('receive-status');
   hide('receive-file-info');
-  hide('receive-verifier');
   hide('receive-progress-section');
   hide('receive-transfer-info');
   document.getElementById('receive-spinner').style.display = '';
   document.getElementById('receive-status-text').textContent = 'establishing encrypted connection...';
+  document.getElementById('receive-status-text').className = 'status-text';
+
+  // Reset checkmark
+  var check = document.getElementById('receive-checkmark');
+  if (check) { check.style.display = 'none'; check.classList.remove('animate'); }
+
+  document.getElementById('receive-status-text').focus();
 
   window.wasmClient.receive(code, {
     onFileInfo(filename, filesize) {
@@ -656,78 +400,95 @@ function startReceiveWasm(code) {
       show('receive-file-info');
       document.getElementById('receive-spinner').style.display = 'none';
     },
-    onVerifier(emoji) {
-      document.getElementById('receive-verifier').textContent = emoji;
-      show('receive-verifier');
-    },
     onStatus(text) {
       document.getElementById('receive-status-text').textContent = text;
     },
     onProgress(pct, speed, connType) {
+      transferActive = true;
       show('receive-progress-section');
       document.getElementById('receive-progress').style.width = pct + '%';
+      document.getElementById('receive-progress').setAttribute('aria-valuenow', String(pct));
       if (speed) {
-        const info = speed + (connType ? ' \u00b7 ' + connType : '');
+        var info = speed + (connType ? ' \u00b7 ' + connType : '');
         document.getElementById('receive-transfer-info').textContent = info;
         show('receive-transfer-info');
       }
     },
     onError(msg) {
+      transferActive = false;
       document.getElementById('receive-status-text').textContent = msg;
       document.getElementById('receive-status-text').className = 'status-text error';
       document.getElementById('receive-spinner').style.display = 'none';
+      var btn = document.getElementById('receive-cancel-btn');
+      btn.textContent = 'New Transfer';
+      btn.className = 'btn';
+      btn.style.width = '100%';
+      btn.style.marginTop = '8px';
+      btn.focus();
     },
     onComplete() {
+      transferActive = false;
       document.getElementById('receive-progress').style.width = '100%';
       document.getElementById('receive-progress').className = 'progress-bar done';
+      document.getElementById('receive-progress').setAttribute('aria-valuenow', '100');
       document.getElementById('receive-status-text').textContent = 'Transfer complete!';
       document.getElementById('receive-status-text').className = 'status-text done';
-      hide('receive-verifier');
+      // Show checkmark
+      var check = document.getElementById('receive-checkmark');
+      if (check) { check.style.display = 'block'; check.classList.add('animate'); }
+      // Change cancel to New Transfer
+      var btn = document.getElementById('receive-cancel-btn');
+      btn.textContent = 'New Transfer';
+      btn.className = 'btn';
+      btn.style.width = '100%';
+      btn.style.marginTop = '8px';
+      btn.focus();
     },
   });
 }
 
-function startReceiveXhr(code) {
-  hide('receive-initial');
-  show('receive-status');
-  document.getElementById('receive-status-text').textContent = 'starting download...';
-
-  const a = document.createElement('a');
-  a.href = '/receive/' + encodeURIComponent(code);
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-
-  setTimeout(() => {
-    hide('receive-status');
-    show('receive-initial');
-    document.getElementById('receive-code').value = '';
-  }, 3000);
-}
-
 function cancelReceive() {
+  transferActive = false;
   hide('receive-status');
   show('receive-initial');
+  // Reset button
+  var btn = document.getElementById('receive-cancel-btn');
+  btn.textContent = 'Cancel';
+  btn.className = 'btn btn-cancel';
+  btn.style.width = '';
+  btn.style.marginTop = '';
+  // Reset checkmark
+  var check = document.getElementById('receive-checkmark');
+  if (check) { check.style.display = 'none'; check.classList.remove('animate'); }
+  // Update progress bar ARIA
+  var prog = document.getElementById('receive-progress');
+  if (prog) prog.setAttribute('aria-valuenow', '0');
 }
 
 // --- Drag and drop ---
-const dz = document.getElementById('dropzone');
+var dz = document.getElementById('dropzone');
 
-dz.addEventListener('dragover', e => {
+dz.addEventListener('dragover', function(e) {
   e.preventDefault();
   dz.classList.add('dragover');
 });
 
-dz.addEventListener('dragleave', () => {
+dz.addEventListener('dragleave', function() {
   dz.classList.remove('dragover');
 });
 
-dz.addEventListener('drop', e => {
+dz.addEventListener('drop', function(e) {
   e.preventDefault();
   dz.classList.remove('dragover');
   if (e.dataTransfer.files.length > 0) {
     startSend(e.dataTransfer.files[0]);
+  }
+});
+
+dz.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    document.getElementById('file-input').click();
   }
 });
 
@@ -747,12 +508,12 @@ if (window.wasmClient) {
 
 // --- Pre-filled receive from URL ---
 (function() {
-  const match = window.location.pathname.match(/^\/receive\/(.+)$/);
+  var match = window.location.pathname.match(/^\/receive\/(.+)$/);
   if (match) {
-    const code = decodeURIComponent(match[1]);
+    var code = decodeURIComponent(match[1]);
     // Wait for WASM to be ready (up to 3 seconds), then start
-    let attempts = 0;
-    const tryStart = () => {
+    var attempts = 0;
+    var tryStart = function() {
       if (window.wasmClient && window.wasmClient.ready) {
         document.getElementById('receive-code').value = code;
         startReceive();

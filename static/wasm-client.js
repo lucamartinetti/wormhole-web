@@ -1,5 +1,4 @@
 // WASM Wormhole Client — E2E encrypted file transfer in the browser
-// Falls back to server-proxied transfer if WASM fails to load.
 
 let wasm = null;
 let wasmReady = false;
@@ -14,7 +13,7 @@ async function initWasm() {
     wasmReady = true;
   } catch (err) {
     wasmLoadError = err;
-    console.warn('[wormhole] WASM load failed, using server proxy:', err);
+    console.warn('[wormhole] WASM load failed:', err);
   }
   updateEncryptionBadge();
 }
@@ -27,7 +26,7 @@ function updateEncryptionBadge() {
     el.classList.remove('warning');
     el.classList.add('encrypted');
   } else {
-    el.innerHTML = 'Not end-to-end encrypted \u2014 the server sees file contents.<br>For E2E encryption, use the <a href="https://magic-wormhole.readthedocs.io/" target="_blank">wormhole CLI</a> directly.';
+    el.textContent = 'Your browser does not support WebAssembly. Use a modern browser or the wormhole CLI.';
     el.classList.remove('encrypted');
     el.classList.add('warning');
   }
@@ -68,8 +67,8 @@ function sanitizeFilename(name) {
 }
 
 // Transit relay URL — same server, /transit path (WS-to-TCP bridge)
-const TRANSIT_RELAY_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') +
-  location.host + '/transit';
+const TRANSIT_RELAY_URL = window.WORMHOLE_TRANSIT_RELAY ||
+  ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/transit');
 
 // --- WASM Send ---
 async function wasmSend(file, callbacks) {
