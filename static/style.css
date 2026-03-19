@@ -62,7 +62,7 @@
 }
 
 /* === Smooth Transitions for Theme Toggle === */
-body, .send-status, .receive-status, .dropzone, .code-box, .mode-tab, .btn, .btn-cancel, .btn-action, .receive-row input, .cli-section {
+body, .send-status, .receive-status, .dropzone, .code-box, .mode-tab, .main-tab, .btn, .btn-cancel, .btn-action, .receive-row input, .cli-section {
   transition: background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
@@ -136,6 +136,33 @@ h1 {
 }
 .theme-toggle:hover { color: var(--text-primary); }
 
+/* === Main Tabs (Send / Receive) === */
+.main-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.main-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: var(--bg-surface);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.main-tab:first-child { border-right: 1px solid var(--border); }
+.main-tab:hover { background: var(--bg-surface-hover); }
+.main-tab.active {
+  background: var(--accent);
+  color: white;
+}
+
 /* === Dropzone === */
 .dropzone {
   border: 2px dashed var(--border);
@@ -154,14 +181,6 @@ h1 {
   animation: none;
 }
 .dropzone input { display: none; }
-
-/* === Divider === */
-.divider {
-  text-align: center;
-  color: var(--text-muted);
-  font-size: 13px;
-  margin: 20px 0;
-}
 
 /* === Receive Row === */
 .receive-row {

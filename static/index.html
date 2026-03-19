@@ -26,84 +26,94 @@
     <svg id="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
     <svg id="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
   </button>
-  <p class="subtitle">Send and receive files via Magic Wormhole</p>
+  <p class="subtitle">End-to-end encrypted file transfer</p>
   <p id="encryption-status" class="warning">Your browser does not support WebAssembly. Use a modern browser or the wormhole CLI.</p>
 
-  <!-- Send: initial state -->
-  <div id="send-initial">
-    <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Drop a file here or click to browse">
-      Drop a file here or click to browse
-      <input type="file" id="file-input" accept="*/*" aria-label="Select file to send">
+  <!-- Send / Receive tabs -->
+  <div class="main-tabs" role="tablist">
+    <button class="main-tab active" id="main-tab-send" onclick="switchTab('send')" role="tab" aria-selected="true" aria-controls="panel-send">Send</button>
+    <button class="main-tab" id="main-tab-receive" onclick="switchTab('receive')" role="tab" aria-selected="false" aria-controls="panel-receive">Receive</button>
+  </div>
+
+  <!-- Send panel -->
+  <div id="panel-send" role="tabpanel" aria-labelledby="main-tab-send">
+    <!-- Send: initial state -->
+    <div id="send-initial">
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()" role="button" tabindex="0" aria-label="Drop a file here or click to browse">
+        Drop a file here or click to browse
+        <input type="file" id="file-input" accept="*/*" aria-label="Select file to send">
+      </div>
+    </div>
+
+    <!-- Send: status state -->
+    <div id="send-status" class="hidden">
+      <div class="send-status" aria-live="polite">
+        <div class="file-info">
+          <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div>
+            <div class="file-name" id="send-filename"></div>
+            <div class="file-size" id="send-filesize"></div>
+          </div>
+        </div>
+        <div id="send-code-section" class="hidden">
+          <div class="code-box" id="send-code"></div>
+          <div class="code-actions">
+            <button class="btn-action" id="btn-copy" onclick="copyCode()" title="Copy" aria-label="Copy code to clipboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              <span id="copy-label">Copy</span>
+            </button>
+            <button class="btn-action" id="btn-share" onclick="shareCode()" title="Share" aria-label="Share code" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              <span>Share</span>
+            </button>
+          </div>
+          <div class="mode-tabs" role="tablist">
+            <button class="mode-tab active" id="tab-web" onclick="setQrMode(true)" role="tab" aria-selected="true">Web</button>
+            <button class="mode-tab" id="tab-wormhole" onclick="setQrMode(false)" role="tab" aria-selected="false">Wormhole</button>
+          </div>
+          <div class="qr-container">
+            <div id="qr-display" role="img" aria-label="QR code for receive link"></div>
+          </div>
+        </div>
+        <svg class="checkmark-icon" id="send-checkmark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none;margin:0 auto 6px"><polyline points="20 6 9 17 4 12"/></svg>
+        <div class="progress-track"><div class="progress-bar" id="send-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
+        <div class="status-text" id="send-status-text" aria-live="polite">allocating code...</div>
+        <div id="send-transfer-info" class="transfer-info hidden"></div>
+        <button class="btn btn-cancel" id="send-cancel-btn" onclick="cancelSend()">Cancel</button>
+      </div>
     </div>
   </div>
 
-  <!-- Send: status state -->
-  <div id="send-status" class="hidden">
-    <div class="send-status" aria-live="polite">
-      <div class="file-info">
-        <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <div>
-          <div class="file-name" id="send-filename"></div>
-          <div class="file-size" id="send-filesize"></div>
-        </div>
+  <!-- Receive panel -->
+  <div id="panel-receive" class="hidden" role="tabpanel" aria-labelledby="main-tab-receive">
+    <!-- Receive: initial state -->
+    <div id="receive-initial">
+      <div class="receive-row">
+        <input type="text" id="receive-code" placeholder="Enter wormhole code" aria-label="Wormhole code"
+               onkeydown="if(event.key==='Enter')startReceive()">
+        <button class="btn" onclick="startReceive()">Receive</button>
       </div>
-      <div id="send-code-section" class="hidden">
-        <div class="code-box" id="send-code"></div>
-        <div class="code-actions">
-          <button class="btn-action" id="btn-copy" onclick="copyCode()" title="Copy" aria-label="Copy code to clipboard">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-            <span id="copy-label">Copy</span>
-          </button>
-          <button class="btn-action" id="btn-share" onclick="shareCode()" title="Share" aria-label="Share code" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            <span>Share</span>
-          </button>
-        </div>
-        <div class="mode-tabs" role="tablist">
-          <button class="mode-tab active" id="tab-web" onclick="setQrMode(true)" role="tab" aria-selected="true">Web</button>
-          <button class="mode-tab" id="tab-wormhole" onclick="setQrMode(false)" role="tab" aria-selected="false">Wormhole</button>
-        </div>
-        <div class="qr-container">
-          <div id="qr-display" role="img" aria-label="QR code for receive link"></div>
-        </div>
-      </div>
-      <svg class="checkmark-icon" id="send-checkmark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none;margin:0 auto 6px"><polyline points="20 6 9 17 4 12"/></svg>
-      <div class="progress-track"><div class="progress-bar" id="send-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
-      <div class="status-text" id="send-status-text" aria-live="polite">allocating code...</div>
-      <div id="send-transfer-info" class="transfer-info hidden"></div>
-      <button class="btn btn-cancel" id="send-cancel-btn" onclick="cancelSend()">Cancel</button>
     </div>
-  </div>
 
-  <div class="divider">&mdash; or &mdash;</div>
-
-  <!-- Receive: initial state -->
-  <div id="receive-initial">
-    <div class="receive-row">
-      <input type="text" id="receive-code" placeholder="Enter wormhole code" aria-label="Wormhole code"
-             onkeydown="if(event.key==='Enter')startReceive()">
-      <button class="btn" onclick="startReceive()">Receive</button>
-    </div>
-  </div>
-
-  <!-- Receive: status state -->
-  <div id="receive-status" class="hidden">
-    <div class="receive-status" aria-live="polite">
-      <div id="receive-file-info" class="file-info hidden">
-        <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <div>
-          <div class="file-name" id="receive-filename"></div>
-          <div class="file-size" id="receive-filesize"></div>
+    <!-- Receive: status state -->
+    <div id="receive-status" class="hidden">
+      <div class="receive-status" aria-live="polite">
+        <div id="receive-file-info" class="file-info hidden">
+          <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div>
+            <div class="file-name" id="receive-filename"></div>
+            <div class="file-size" id="receive-filesize"></div>
+          </div>
         </div>
+        <div id="receive-progress-section" class="hidden">
+          <div class="progress-track"><div class="progress-bar" id="receive-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
+        </div>
+        <svg class="checkmark-icon" id="receive-checkmark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none;margin:0 auto 6px"><polyline points="20 6 9 17 4 12"/></svg>
+        <div id="receive-spinner" class=""><span class="spinner"></span></div>
+        <span id="receive-status-text" aria-live="polite">starting download...</span>
+        <div id="receive-transfer-info" class="transfer-info hidden"></div>
+        <button class="btn btn-cancel" id="receive-cancel-btn" onclick="cancelReceive()">Cancel</button>
       </div>
-      <div id="receive-progress-section" class="hidden">
-        <div class="progress-track"><div class="progress-bar" id="receive-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div>
-      </div>
-      <svg class="checkmark-icon" id="receive-checkmark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none;margin:0 auto 6px"><polyline points="20 6 9 17 4 12"/></svg>
-      <div id="receive-spinner" class=""><span class="spinner"></span></div>
-      <span id="receive-status-text" aria-live="polite">starting download...</span>
-      <div id="receive-transfer-info" class="transfer-info hidden"></div>
-      <button class="btn btn-cancel" id="receive-cancel-btn" onclick="cancelReceive()">Cancel</button>
     </div>
   </div>
 
@@ -167,6 +177,29 @@ function formatSize(bytes) {
 
 function show(id) { document.getElementById(id).classList.remove('hidden'); }
 function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+// --- Tab Switching ---
+function switchTab(tab) {
+  var sendTab = document.getElementById('main-tab-send');
+  var recvTab = document.getElementById('main-tab-receive');
+  var sendPanel = document.getElementById('panel-send');
+  var recvPanel = document.getElementById('panel-receive');
+  if (tab === 'send') {
+    sendTab.classList.add('active');
+    sendTab.setAttribute('aria-selected', 'true');
+    recvTab.classList.remove('active');
+    recvTab.setAttribute('aria-selected', 'false');
+    sendPanel.classList.remove('hidden');
+    recvPanel.classList.add('hidden');
+  } else {
+    recvTab.classList.add('active');
+    recvTab.setAttribute('aria-selected', 'true');
+    sendTab.classList.remove('active');
+    sendTab.setAttribute('aria-selected', 'false');
+    recvPanel.classList.remove('hidden');
+    sendPanel.classList.add('hidden');
+  }
+}
 
 // --- Dark Mode Toggle ---
 function toggleTheme() {
@@ -515,6 +548,7 @@ if (window.wasmClient) {
     var attempts = 0;
     var tryStart = function() {
       if (window.wasmClient && window.wasmClient.ready) {
+        switchTab('receive');
         document.getElementById('receive-code').value = code;
         startReceive();
       } else if (attempts < 30) {
@@ -522,6 +556,7 @@ if (window.wasmClient) {
         setTimeout(tryStart, 100);
       } else {
         // Fallback: fill the code input and let user click
+        switchTab('receive');
         document.getElementById('receive-code').value = code;
       }
     };
