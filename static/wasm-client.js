@@ -6,12 +6,54 @@ let wasmLoadError = null;
 let activeSender = null;
 let activeReceiver = null;
 
+// Verify a fetch response against a known SRI hash using Web Crypto API.
+// Returns the ArrayBuffer if verification passes, throws on mismatch.
+async function verifyIntegrity(buffer, expectedSri) {
+  if (!expectedSri || !expectedSri.startsWith('sha384-')) {
+    console.warn('[wormhole] No valid SRI hash found, skipping integrity check');
+    return buffer;
+  }
+  const expectedB64 = expectedSri.slice('sha384-'.length);
+  const hashBuf = await crypto.subtle.digest('SHA-384', buffer);
+  const hashArr = new Uint8Array(hashBuf);
+  // Convert to base64
+  let binary = '';
+  for (let i = 0; i < hashArr.length; i++) {
+    binary += String.fromCharCode(hashArr[i]);
+  }
+  const actualB64 = btoa(binary);
+  if (actualB64 !== expectedB64) {
+    throw new Error(
+      'WASM integrity check failed: expected sha384-' + expectedB64 +
+      ' but got sha384-' + actualB64
+    );
+  }
+  return buffer;
+}
+
 // Load WASM module in background
 async function initWasm() {
   try {
-    const mod = await import('/static/wasm/wormhole_wasm.js');
-    await mod.default();
-    wasm = mod;
+    // Verify .wasm binary integrity before instantiation
+    const wasmIntegrityMeta = document.querySelector('meta[name="wasm-integrity"]');
+    const expectedHash = wasmIntegrityMeta ? wasmIntegrityMeta.content : null;
+
+    if (expectedHash && expectedHash.startsWith('sha384-')) {
+      // Fetch and verify the .wasm binary, then pass it to the init function
+      const wasmResp = await fetch('/static/wasm/wormhole_wasm_bg.wasm');
+      const wasmBytes = await wasmResp.arrayBuffer();
+      await verifyIntegrity(wasmBytes, expectedHash);
+
+      // The JS glue is integrity-checked via <link rel="modulepreload">
+      const mod = await import('/static/wasm/wormhole_wasm.js');
+      await mod.default(new WebAssembly.Module(wasmBytes));
+      wasm = mod;
+    } else {
+      // No SRI hash injected (dev mode) — load without verification
+      const mod = await import('/static/wasm/wormhole_wasm.js');
+      await mod.default();
+      wasm = mod;
+    }
     wasmReady = true;
   } catch (err) {
     wasmLoadError = err;
