@@ -437,7 +437,7 @@ function startReceive() {
   var input = document.getElementById('receive-code');
   var code = input.value.trim().toLowerCase().replace(/\s+/g, '');
   if (!code) return;
-  input.value = code; // show normalized code
+  input.value = ''; // code is single-use — clear it immediately
   if (!window.wasmClient || !window.wasmClient.ready) return;
   // Clean up any previous receive to avoid leaking relay connections
   window.wasmClient.cancelReceive();
