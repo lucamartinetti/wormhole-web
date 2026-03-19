@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#fafafa"/>
+
+  <!-- Wormhole rings (matching favicon style) -->
+  <circle cx="600" cy="270" r="80" stroke="#228be6" stroke-width="6" fill="none" opacity="0.18"/>
+  <circle cx="600" cy="270" r="55" stroke="#228be6" stroke-width="5" fill="none" opacity="0.35"/>
+  <circle cx="600" cy="270" r="32" stroke="#228be6" stroke-width="4.5" fill="none" opacity="0.6"/>
+  <circle cx="600" cy="270" r="13" stroke="#228be6" stroke-width="4" fill="none" opacity="0.9"/>
+
+  <!-- Lock icon inside innermost ring -->
+  <g transform="translate(600, 270)" fill="#228be6" opacity="0.85">
+    <rect x="-5.5" y="-2" width="11" height="9" rx="1.5"/>
+    <path d="M-3.5,-2 L-3.5,-5 A3.5,3.5 0 0,1 3.5,-5 L3.5,-2" fill="none" stroke="#228be6" stroke-width="1.8" stroke-linecap="round"/>
+  </g>
+
+  <!-- Title -->
+  <text x="600" y="400" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="48" font-weight="700" fill="#1a1b1e" letter-spacing="-0.5">wormhole.page</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="445" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="400" fill="#868e96">End-to-end encrypted file transfer</text>
+</svg>
