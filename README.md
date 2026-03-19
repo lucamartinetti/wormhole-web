@@ -39,6 +39,30 @@ Open [wormhole.page](https://wormhole.page) in two tabs (or two devices). Send i
 
 ## Self-hosting
 
+wormhole.page is a single binary (~5 MB) with zero external dependencies.
+
+### One-click deploy
+
+[![Deploy on Fly.io](https://img.shields.io/badge/Deploy%20on-Fly.io-7b36ed?logo=fly-dot-io)](https://fly.io/docs/launch/fly-from-a-github-repo/?repo=lucamartinetti/wormhole-page)
+[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E?logo=railway)](https://railway.app/new/template?repo=lucamartinetti/wormhole-page)
+
+### Docker Compose
+
+```bash
+docker compose up
+```
+
+This builds the image locally from the `Containerfile` and starts the server on port 8080. See [`docker-compose.yml`](docker-compose.yml) for configuration options.
+
+### Container
+
+```bash
+podman build -t wormhole-page .
+podman run -p 8080:8080 wormhole-page
+```
+
+### From source
+
 Requires Rust 1.94+ and wasm-pack.
 
 ```bash
@@ -46,13 +70,6 @@ git clone https://github.com/lucamartinetti/wormhole-page.git
 cd wormhole-web
 make build
 make run
-```
-
-### Container
-
-```bash
-podman build -t wormhole-page .
-podman run -p 8080:8080 wormhole-page
 ```
 
 ### Configuration

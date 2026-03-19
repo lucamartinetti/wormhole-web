@@ -1,0 +1,9 @@
+services:
+  wormhole-page:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      # - TRANSIT_RELAY=transit.magic-wormhole.io:4001
+    restart: unless-stopped
