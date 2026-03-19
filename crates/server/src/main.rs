@@ -36,6 +36,7 @@ struct Args {
 #[derive(Clone)]
 struct AppState {
     index_html: Arc<String>,
+    service_worker: Arc<String>,
     transit_relay: Arc<String>,
 }
 
@@ -55,9 +56,15 @@ async fn main() {
     let index_html = std::fs::read_to_string(&index_path)
         .unwrap_or_else(|e| panic!("Failed to read {}: {e}", index_path.display()));
 
+    // Read sw.js at startup for root-scoped service worker
+    let sw_path = args.static_dir.join("sw.js");
+    let service_worker = std::fs::read_to_string(&sw_path)
+        .unwrap_or_else(|e| panic!("Failed to read {}: {e}", sw_path.display()));
+
     let transit_relay = args.transit_relay;
     let state = AppState {
         index_html: Arc::new(index_html),
+        service_worker: Arc::new(service_worker),
         transit_relay: Arc::new(transit_relay.clone()),
     };
 
@@ -66,6 +73,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", axum::routing::get(health))
+        .route("/sw.js", axum::routing::get(serve_sw))
         .route("/transit", axum::routing::get(transit_ws))
         // SPA fallback: /receive/<code> serves index.html
         .route("/receive/{code}", axum::routing::get(spa_fallback))
@@ -121,6 +129,23 @@ async fn security_headers(
 /// GET /health
 async fn health() -> &'static str {
     "ok"
+}
+
+/// GET /sw.js — serve the service worker from root scope with no-cache
+async fn serve_sw(State(state): State<AppState>) -> impl IntoResponse {
+    (
+        [
+            (
+                HeaderName::from_static("content-type"),
+                HeaderValue::from_static("application/javascript"),
+            ),
+            (
+                HeaderName::from_static("cache-control"),
+                HeaderValue::from_static("no-cache"),
+            ),
+        ],
+        state.service_worker.as_str().to_string(),
+    )
 }
 
 /// GET / (and fallback for unknown routes)
