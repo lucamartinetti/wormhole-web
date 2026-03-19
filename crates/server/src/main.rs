@@ -155,12 +155,30 @@ async fn transit_ws(
 }
 
 async fn handle_transit(ws: WebSocket, relay_addr: Arc<String>) {
-    tracing::debug!("transit bridge: browser connected");
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::Duration;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    // Connect to upstream TCP relay
-    let tcp = match TcpStream::connect(relay_addr.as_str()).await {
-        Ok(stream) => stream,
-        Err(e) => {
+    tracing::info!("transit bridge: browser connected");
+    let start = std::time::Instant::now();
+
+    // Connect to upstream TCP relay with a timeout
+    let tcp = match tokio::time::timeout(
+        Duration::from_secs(10),
+        TcpStream::connect(relay_addr.as_str()),
+    )
+    .await
+    {
+        Ok(Ok(stream)) => {
+            // Set TCP keepalive to detect dead connections
+            let sock_ref = socket2::SockRef::from(&stream);
+            let keepalive = socket2::TcpKeepalive::new()
+                .with_time(Duration::from_secs(30))
+                .with_interval(Duration::from_secs(10));
+            let _ = sock_ref.set_tcp_keepalive(&keepalive);
+            stream
+        }
+        Ok(Err(e)) => {
             tracing::warn!("transit bridge: upstream connect failed: {e}");
             let (mut sink, _) = ws.split();
             let _ = sink
@@ -171,66 +189,132 @@ async fn handle_transit(ws: WebSocket, relay_addr: Arc<String>) {
                 .await;
             return;
         }
+        Err(_) => {
+            tracing::warn!("transit bridge: upstream connect timed out (10s)");
+            let (mut sink, _) = ws.split();
+            let _ = sink
+                .send(Message::Close(Some(axum::extract::ws::CloseFrame {
+                    code: 1011,
+                    reason: "upstream relay connect timeout".into(),
+                })))
+                .await;
+            return;
+        }
     };
 
-    tracing::debug!("transit bridge: connected to upstream");
+    tracing::info!("transit bridge: connected to upstream relay");
 
     let (tcp_read, tcp_write) = tcp.into_split();
-    let (ws_sink, ws_stream) = ws.split();
+    let (mut ws_sink, mut ws_stream) = ws.split();
+
+    let ws_to_tcp_bytes = Arc::new(AtomicU64::new(0));
+    let tcp_to_ws_bytes = Arc::new(AtomicU64::new(0));
 
     // WS → TCP: forward browser messages to upstream relay
-    let ws_to_tcp = {
-        let mut ws_stream = ws_stream;
+    let ws_to_tcp_count = ws_to_tcp_bytes.clone();
+    let ws_to_tcp = async move {
         let mut tcp_write = tokio::io::BufWriter::new(tcp_write);
-        async move {
-            use tokio::io::AsyncWriteExt;
-            while let Some(msg) = ws_stream.next().await {
-                match msg {
-                    Ok(Message::Binary(data)) => {
-                        if tcp_write.write_all(&data).await.is_err() {
+        while let Some(msg) = ws_stream.next().await {
+            match msg {
+                Ok(Message::Binary(data)) => {
+                    let len = data.len() as u64;
+                    // Use a timeout on TCP write to avoid hanging on stalled relay
+                    match tokio::time::timeout(
+                        Duration::from_secs(30),
+                        async {
+                            tcp_write.write_all(&data).await?;
+                            tcp_write.flush().await
+                        },
+                    )
+                    .await
+                    {
+                        Ok(Ok(())) => {
+                            ws_to_tcp_count.fetch_add(len, Ordering::Relaxed);
+                        }
+                        Ok(Err(e)) => {
+                            tracing::warn!("transit bridge: TCP write error: {e}");
                             break;
                         }
-                        if tcp_write.flush().await.is_err() {
+                        Err(_) => {
+                            tracing::warn!("transit bridge: TCP write timeout (30s)");
                             break;
                         }
                     }
-                    Ok(Message::Close(_)) | Err(_) => break,
-                    _ => {} // ignore text, ping, pong
                 }
+                Ok(Message::Close(_)) => {
+                    tracing::debug!("transit bridge: WS close frame received");
+                    break;
+                }
+                Err(e) => {
+                    tracing::warn!("transit bridge: WS read error: {e}");
+                    break;
+                }
+                _ => {} // ignore text, ping, pong
             }
         }
+        // Flush any remaining data before dropping
+        let _ = tcp_write.flush().await;
+        let _ = tcp_write.shutdown().await;
     };
 
     // TCP → WS: forward upstream relay data to browser
-    let tcp_to_ws = {
+    let tcp_to_ws_count = tcp_to_ws_bytes.clone();
+    let tcp_to_ws = async move {
         let mut tcp_read = tokio::io::BufReader::new(tcp_read);
-        let mut ws_sink = ws_sink;
-        async move {
-            use tokio::io::AsyncReadExt;
-            let mut buf = vec![0u8; 64 * 1024];
-            loop {
-                match tcp_read.read(&mut buf).await {
-                    Ok(0) => break, // EOF
-                    Ok(n) => {
-                        if ws_sink
-                            .send(Message::Binary(buf[..n].to_vec().into()))
-                            .await
-                            .is_err()
-                        {
-                            break;
-                        }
+        let mut buf = vec![0u8; 64 * 1024];
+        loop {
+            // Timeout on TCP read — if the relay goes silent for 2 minutes,
+            // the connection is likely dead
+            match tokio::time::timeout(Duration::from_secs(120), tcp_read.read(&mut buf)).await {
+                Ok(Ok(0)) => {
+                    tracing::debug!("transit bridge: TCP EOF");
+                    break;
+                }
+                Ok(Ok(n)) => {
+                    tcp_to_ws_count.fetch_add(n as u64, Ordering::Relaxed);
+                    if ws_sink
+                        .send(Message::Binary(buf[..n].to_vec().into()))
+                        .await
+                        .is_err()
+                    {
+                        tracing::warn!("transit bridge: WS send failed");
+                        break;
                     }
-                    Err(_) => break,
+                }
+                Ok(Err(e)) => {
+                    tracing::warn!("transit bridge: TCP read error: {e}");
+                    break;
+                }
+                Err(_) => {
+                    tracing::warn!("transit bridge: TCP read timeout (120s), closing");
+                    break;
                 }
             }
         }
+        // Send close frame to browser
+        let _ = ws_sink
+            .send(Message::Close(Some(axum::extract::ws::CloseFrame {
+                code: 1000,
+                reason: "relay closed".into(),
+            })))
+            .await;
     };
 
-    // Run both directions concurrently; when either finishes, the other is dropped
+    // Run both directions concurrently; when either finishes, the other is dropped.
+    // This is correct for a bidirectional proxy — once one side closes, the bridge
+    // is no longer functional. The flush/shutdown above ensures pending data is sent.
     tokio::select! {
-        _ = ws_to_tcp => tracing::debug!("transit bridge: WS closed"),
-        _ = tcp_to_ws => tracing::debug!("transit bridge: TCP closed"),
+        _ = ws_to_tcp => tracing::debug!("transit bridge: WS→TCP finished"),
+        _ = tcp_to_ws => tracing::debug!("transit bridge: TCP→WS finished"),
     }
 
-    tracing::debug!("transit bridge: connection ended");
+    let elapsed = start.elapsed();
+    let ws_bytes = ws_to_tcp_bytes.load(Ordering::Relaxed);
+    let tcp_bytes = tcp_to_ws_bytes.load(Ordering::Relaxed);
+    tracing::info!(
+        "transit bridge: closed after {:.1}s (WS→TCP: {} bytes, TCP→WS: {} bytes)",
+        elapsed.as_secs_f64(),
+        ws_bytes,
+        tcp_bytes,
+    );
 }
