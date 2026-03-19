@@ -1,7 +1,12 @@
-.PHONY: wasm wasm-clean
+.PHONY: build server wasm wasm-clean clean run
 
 WASM_CRATE = crates/wormhole-wasm
-WASM_OUT = src/wormhole_web/static/wasm
+WASM_OUT = static/wasm
+
+build: server wasm
+
+server:
+	cargo build --release -p wormhole-web-server
 
 wasm:
 	cd $(WASM_CRATE) && wasm-pack build --target web --release
@@ -9,6 +14,9 @@ wasm:
 	cp $(WASM_CRATE)/pkg/wormhole_wasm_bg.wasm $(WASM_OUT)/
 	cp $(WASM_CRATE)/pkg/wormhole_wasm.js $(WASM_OUT)/
 
-wasm-clean:
-	cd $(WASM_CRATE) && cargo clean
+run: build
+	./target/release/wormhole-web-server --static-dir static/
+
+clean:
+	cargo clean
 	rm -rf $(WASM_OUT)

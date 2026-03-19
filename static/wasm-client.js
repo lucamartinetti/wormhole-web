@@ -8,7 +8,7 @@ let wasmLoadError = null;
 // Load WASM module in background
 async function initWasm() {
   try {
-    const mod = await import('./wasm/wormhole_wasm.js');
+    const mod = await import('/static/wasm/wormhole_wasm.js');
     await mod.default();
     wasm = mod;
     wasmReady = true;
@@ -67,9 +67,9 @@ function sanitizeFilename(name) {
     || 'download';
 }
 
-// Transit relay URL — our server embeds a WebSocket transit relay
+// Transit relay URL — same server, /transit path (WS-to-TCP bridge)
 const TRANSIT_RELAY_URL = (location.protocol === 'https:' ? 'wss://' : 'ws://') +
-  location.hostname + ':4002';
+  location.host + '/transit';
 
 // --- WASM Send ---
 async function wasmSend(file, callbacks) {

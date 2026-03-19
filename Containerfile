@@ -1,21 +1,30 @@
-FROM python:3.12-slim
+# --- Build stage: Rust server + WASM ---
+FROM rust:1.94-slim AS builder
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN cargo install wasm-pack
 
-WORKDIR /app
+WORKDIR /build
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ crates/
 
-# Install dependencies first (layer caching)
-COPY pyproject.toml .
-RUN uv sync --no-dev --no-install-project
+# Build server
+RUN cargo build --release -p wormhole-web-server
 
-# Copy source
-COPY src/ src/
+# Build WASM
+RUN cd crates/wormhole-wasm && wasm-pack build --target web --release
 
-# Install project
-RUN uv sync --no-dev
+# --- Runtime stage ---
+FROM debian:bookworm-slim
 
-EXPOSE 8080 4002
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["uv", "run", "wormhole-web"]
-CMD ["--port", "8080", "--transit-port", "4002"]
+COPY --from=builder /build/target/release/wormhole-web-server /usr/local/bin/
+COPY static/ /app/static/
+COPY --from=builder /build/crates/wormhole-wasm/pkg/wormhole_wasm_bg.wasm /app/static/wasm/
+COPY --from=builder /build/crates/wormhole-wasm/pkg/wormhole_wasm.js /app/static/wasm/
+
+EXPOSE 8080
+
+ENTRYPOINT ["wormhole-web-server"]
+CMD ["--port", "8080", "--static-dir", "/app/static"]

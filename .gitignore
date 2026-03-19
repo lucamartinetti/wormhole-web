@@ -1,11 +1,4 @@
-__pycache__/
-*.pyc
-*.egg-info/
-dist/
-build/
-.venv/
-.superpowers/
-
-# Rust/WASM build artifacts
-crates/wormhole-wasm/target/
+/target/
+crates/*/target/
 crates/wormhole-wasm/pkg/
+.gstack/

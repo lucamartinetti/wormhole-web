@@ -1,0 +1,4 @@
+[workspace]
+members = ["crates/server", "crates/wormhole-wasm"]
+exclude = ["crates/magic-wormhole-patched"]
+resolver = "2"
