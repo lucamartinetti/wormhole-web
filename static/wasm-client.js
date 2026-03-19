@@ -209,9 +209,12 @@ async function wasmReceive(code, callbacks) {
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      // Delay revoke — Firefox needs time to start reading the Blob
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      // Delay cleanup — browsers may not start the download synchronously,
+      // so removing the element or revoking the URL too early drops small files.
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 60000);
     }
 
     onComplete();
