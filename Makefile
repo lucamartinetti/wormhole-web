@@ -1,4 +1,4 @@
-.PHONY: build server wasm sri wasm-clean clean run
+.PHONY: build server wasm sri wasm-clean clean run test
 
 WASM_CRATE = crates/wormhole-wasm
 WASM_OUT = static/wasm
@@ -22,6 +22,9 @@ sri: wasm
 
 run: build
 	./target/release/wormhole-page-server --static-dir static/
+
+test:
+	npx playwright test
 
 clean:
 	cargo clean

@@ -2,3 +2,6 @@
 crates/*/target/
 crates/wormhole-wasm/pkg/
 .gstack/
+node_modules/
+test-results/
+playwright-report/
