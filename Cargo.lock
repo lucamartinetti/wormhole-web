@@ -1514,6 +1514,7 @@ checksum = "670fdfda89751bc4a84ac13eaa63e205cf0fd22b4c9a5fbfa085b63c1f1d3a30"
 [[package]]
 name = "magic-wormhole"
 version = "0.8.0-alpha.1"
+source = "git+https://github.com/lucamartinetti/magic-wormhole.rs?branch=wasm-time-fix#b695a1d79138d802391125f4ebbc463b80737974"
 dependencies = [
  "async-executor",
  "async-fs",
@@ -1546,7 +1547,7 @@ dependencies = [
  "serde_json",
  "sha-1",
  "sha2",
- "socket2",
+ "socket2 0.6.3",
  "spake2",
  "stun_codec",
  "tar",
@@ -2199,6 +2200,16 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "socket2"
+version = "0.5.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e22376abed350d73dd1cd119b57ffccad95b4e585a7cda43e286245ce23c0678"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "socket2"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
@@ -2385,7 +2396,7 @@ dependencies = [
  "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
- "socket2",
+ "socket2 0.6.3",
  "tokio-macros",
  "windows-sys 0.61.2",
 ]
@@ -2882,6 +2893,15 @@ dependencies = [
 
 [[package]]
 name = "windows-sys"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
+dependencies = [
+ "windows-targets",
+]
+
+[[package]]
+name = "windows-sys"
 version = "0.59.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
@@ -2975,6 +2995,7 @@ dependencies = [
  "axum",
  "clap",
  "futures-util",
+ "socket2 0.5.10",
  "tokio",
  "tokio-tungstenite 0.26.2",
  "tower-http",

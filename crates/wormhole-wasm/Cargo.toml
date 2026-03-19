@@ -7,9 +7,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# TODO: Replace with git fork once pushed:
-# magic-wormhole = { git = "https://github.com/lucamartinetti/magic-wormhole.rs", branch = "wasm-time-fix" }
-magic-wormhole = { path = "../magic-wormhole-patched", default-features = false, features = ["transit", "transfer"] }
+magic-wormhole = { git = "https://github.com/lucamartinetti/magic-wormhole.rs", branch = "wasm-time-fix", default-features = false, features = ["transit", "transfer"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
