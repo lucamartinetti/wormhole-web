@@ -298,6 +298,8 @@ function startSend(file) {
     // WASM not loaded -- can't proceed
     return;
   }
+  // Clean up any previous send to avoid leaking relay connections
+  window.wasmClient.cancelSend();
   startSendWasm(file);
 }
 
@@ -381,6 +383,7 @@ function markSendComplete() {
 }
 
 function cancelSend() {
+  if (window.wasmClient) window.wasmClient.cancelSend();
   transferActive = false;
   currentCode = null;
   hide('send-status');
@@ -407,6 +410,8 @@ function startReceive() {
   if (!code) return;
   input.value = code; // show normalized code
   if (!window.wasmClient || !window.wasmClient.ready) return;
+  // Clean up any previous receive to avoid leaking relay connections
+  window.wasmClient.cancelReceive();
   startReceiveWasm(code);
 }
 
@@ -481,6 +486,7 @@ function startReceiveWasm(code) {
 }
 
 function cancelReceive() {
+  if (window.wasmClient) window.wasmClient.cancelReceive();
   transferActive = false;
   hide('receive-status');
   show('receive-initial');

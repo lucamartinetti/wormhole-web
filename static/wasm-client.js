@@ -3,6 +3,8 @@
 let wasm = null;
 let wasmReady = false;
 let wasmLoadError = null;
+let activeSender = null;
+let activeReceiver = null;
 
 // Load WASM module in background
 async function initWasm() {
@@ -78,6 +80,7 @@ async function wasmSend(file, callbacks) {
   try {
     onStatus('allocating code...');
     sender = await wasm.WormholeSender.create(TRANSIT_RELAY_URL);
+    activeSender = sender;
     const code = sender.code();
     onCode(code);
 
@@ -106,6 +109,7 @@ async function wasmSend(file, callbacks) {
   } catch (err) {
     onError(err.message || String(err));
   } finally {
+    activeSender = null;
     if (sender) {
       try { sender.close(); } catch (_) {}
     }
@@ -120,6 +124,7 @@ async function wasmReceive(code, callbacks) {
   try {
     onStatus('establishing encrypted connection...');
     receiver = await wasm.WormholeReceiver.create(code, TRANSIT_RELAY_URL);
+    activeReceiver = receiver;
 
     onStatus('waiting for file offer...');
     const offer = await receiver.negotiate();
@@ -214,6 +219,7 @@ async function wasmReceive(code, callbacks) {
   } catch (err) {
     onError(err.message || String(err));
   } finally {
+    activeReceiver = null;
     if (receiver) {
       try { receiver.close(); } catch (_) {}
     }
@@ -226,4 +232,16 @@ window.wasmClient = {
   send: wasmSend,
   receive: wasmReceive,
   initWasm,
+  cancelSend() {
+    if (activeSender) {
+      try { activeSender.close(); } catch (_) {}
+      activeSender = null;
+    }
+  },
+  cancelReceive() {
+    if (activeReceiver) {
+      try { activeReceiver.close(); } catch (_) {}
+      activeReceiver = null;
+    }
+  },
 };
