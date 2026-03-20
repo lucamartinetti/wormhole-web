@@ -68,4 +68,18 @@ test.describe('Receive flow', () => {
     const statusVisible = await receiveStatus.isVisible();
     expect(inputValue === '7-guitar-hero' || statusVisible).toBeTruthy();
   });
+
+  test('canceling URL-based receive cleans the URL back to /', async ({ page }) => {
+    await page.goto('/receive/7-guitar-hero');
+    await page.waitForTimeout(500);
+
+    // Wait for receive to start
+    await expect(page.locator('#receive-status')).toBeVisible({ timeout: 5000 });
+
+    // Cancel
+    await page.locator('#receive-cancel-btn').click();
+
+    // URL should be cleaned back to /
+    await expect(page).toHaveURL('http://localhost:8080/');
+  });
 });
