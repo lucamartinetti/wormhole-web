@@ -27,8 +27,14 @@ COPY --from=builder /build/crates/wormhole-wasm/pkg/wormhole_wasm.js /app/static
 # Generate SRI hashes for WASM integrity verification
 RUN WASM_JS_HASH=$(openssl dgst -sha384 -binary /app/static/wasm/wormhole_wasm.js | openssl base64 -A) && \
     WASM_BG_HASH=$(openssl dgst -sha384 -binary /app/static/wasm/wormhole_wasm_bg.wasm | openssl base64 -A) && \
+    QR_JS_HASH=$(openssl dgst -sha384 -binary /app/static/qr.js | openssl base64 -A) && \
+    WASM_CLIENT_JS_HASH=$(openssl dgst -sha384 -binary /app/static/wasm-client.js | openssl base64 -A) && \
+    APP_JS_HASH=$(openssl dgst -sha384 -binary /app/static/app.js | openssl base64 -A) && \
     sed -i "s|WASM_JS_SRI_HASH|sha384-${WASM_JS_HASH}|g" /app/static/index.html && \
-    sed -i "s|WASM_BG_SRI_HASH|sha384-${WASM_BG_HASH}|g" /app/static/index.html
+    sed -i "s|WASM_BG_SRI_HASH|sha384-${WASM_BG_HASH}|g" /app/static/index.html && \
+    sed -i "s|QR_JS_SRI_HASH|sha384-${QR_JS_HASH}|g" /app/static/index.html && \
+    sed -i "s|WASM_CLIENT_JS_SRI_HASH|sha384-${WASM_CLIENT_JS_HASH}|g" /app/static/index.html && \
+    sed -i "s|APP_JS_SRI_HASH|sha384-${APP_JS_HASH}|g" /app/static/index.html
 
 EXPOSE 8080
 

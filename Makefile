@@ -25,6 +25,15 @@ sri: wasm
 	sed -i "s|WASM_BG_SRI_HASH|sha384-$$WASM_BG_HASH|g" static/index.html && \
 	echo "  wormhole_wasm.js:     sha384-$$WASM_JS_HASH" && \
 	echo "  wormhole_wasm_bg.wasm: sha384-$$WASM_BG_HASH"
+	@QR_JS_HASH=$$(openssl dgst -sha384 -binary static/qr.js | openssl base64 -A) && \
+	WASM_CLIENT_JS_HASH=$$(openssl dgst -sha384 -binary static/wasm-client.js | openssl base64 -A) && \
+	APP_JS_HASH=$$(openssl dgst -sha384 -binary static/app.js | openssl base64 -A) && \
+	sed -i "s|QR_JS_SRI_HASH|sha384-$$QR_JS_HASH|g" static/index.html && \
+	sed -i "s|WASM_CLIENT_JS_SRI_HASH|sha384-$$WASM_CLIENT_JS_HASH|g" static/index.html && \
+	sed -i "s|APP_JS_SRI_HASH|sha384-$$APP_JS_HASH|g" static/index.html && \
+	echo "  qr.js:            sha384-$$QR_JS_HASH" && \
+	echo "  wasm-client.js:   sha384-$$WASM_CLIENT_JS_HASH" && \
+	echo "  app.js:           sha384-$$APP_JS_HASH"
 
 run: build
 	./target/release/wormhole-page-server --static-dir static/

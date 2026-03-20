@@ -1,9 +1,10 @@
-const CACHE_NAME = 'wormhole-v8';
+const CACHE_NAME = 'wormhole-v9';
 const SHELL_ASSETS = [
   '/',
   '/static/index.html',
   '/static/style.css',
   '/static/wasm-client.js',
+  '/static/app.js',
   '/static/qr.js',
   '/static/wasm/wormhole_wasm.js',
   '/static/wasm/wormhole_wasm_bg.wasm',
@@ -66,14 +67,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/static/') || url.pathname === '/') {
     event.respondWith(
       caches.match(event.request).then((cached) =>
-        cached || fetch(event.request).then((response) => {
-          // Cache successful responses for future use
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => {
+        cached || fetch(event.request).catch(() => {
           // Offline fallback for root/HTML
           if (url.pathname === '/') {
             return new Response(OFFLINE_HTML, {
