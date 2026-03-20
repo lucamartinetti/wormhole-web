@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wormhole-v9';
+const CACHE_NAME = 'wormhole-BUILD_HASH';
 const SHELL_ASSETS = [
   '/',
   '/static/index.html',
@@ -63,19 +63,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets and root
-  if (url.pathname.startsWith('/static/') || url.pathname === '/') {
+  // Network-first for root / index.html (carries SRI hashes, must stay fresh)
+  if (url.pathname === '/' || url.pathname === '/static/index.html') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() =>
+          caches.match(event.request).then((cached) =>
+            cached || new Response(OFFLINE_HTML, {
+              headers: { 'Content-Type': 'text/html' },
+            })
+          )
+        )
+    );
+    return;
+  }
+
+  // Cache-first for other static assets
+  if (url.pathname.startsWith('/static/')) {
     event.respondWith(
       caches.match(event.request).then((cached) =>
-        cached || fetch(event.request).catch(() => {
-          // Offline fallback for root/HTML
-          if (url.pathname === '/') {
-            return new Response(OFFLINE_HTML, {
-              headers: { 'Content-Type': 'text/html' },
-            });
-          }
-          return caches.match('/');
-        })
+        cached || fetch(event.request).catch(() => caches.match('/'))
       )
     );
     return;

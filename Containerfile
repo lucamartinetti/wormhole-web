@@ -34,7 +34,9 @@ RUN WASM_JS_HASH=$(openssl dgst -sha384 -binary /app/static/wasm/wormhole_wasm.j
     sed -i "s|WASM_BG_SRI_HASH|sha384-${WASM_BG_HASH}|g" /app/static/index.html && \
     sed -i 's|src="/static/qr.js"|src="/static/qr.js" integrity="sha384-'"${QR_JS_HASH}"'" crossorigin="anonymous"|' /app/static/index.html && \
     sed -i 's|src="/static/wasm-client.js"|src="/static/wasm-client.js" integrity="sha384-'"${WASM_CLIENT_JS_HASH}"'" crossorigin="anonymous"|' /app/static/index.html && \
-    sed -i 's|src="/static/app.js"|src="/static/app.js" integrity="sha384-'"${APP_JS_HASH}"'" crossorigin="anonymous"|' /app/static/index.html
+    sed -i 's|src="/static/app.js"|src="/static/app.js" integrity="sha384-'"${APP_JS_HASH}"'" crossorigin="anonymous"|' /app/static/index.html && \
+    BUILD_HASH=$(cat /app/static/wasm/wormhole_wasm_bg.wasm /app/static/wasm/wormhole_wasm.js /app/static/app.js /app/static/style.css | openssl dgst -sha256 -binary | openssl base64 -A | head -c 8) && \
+    sed -i "s|BUILD_HASH|${BUILD_HASH}|g" /app/static/sw.js
 
 EXPOSE 8080
 
