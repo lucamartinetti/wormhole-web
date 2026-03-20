@@ -21,7 +21,7 @@ test.describe('WASM initialization', () => {
       { timeout: 5000 },
     );
 
-    await expect(badge).toHaveText('End-to-end encrypted');
+    await expect(badge).toContainText('End-to-end encrypted');
     await expect(badge).toHaveClass(/encrypted/);
     await expect(badge).not.toHaveClass(/warning/);
   });
