@@ -101,11 +101,15 @@ function getSpeed() {
 
 // --- Filename sanitization ---
 function sanitizeFilename(name) {
-  // Strip path separators, null bytes, and limit length
   return name
     .replace(/[\/\\]/g, '_')
-    .replace(/\0/g, '')
+    .replace(/[\x00-\x1f\x7f]/g, '')
+    .replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, '')
+    .replace(/"/g, '_')
     .replace(/\.\./g, '_')
+    .replace(/^\.+/, '')
+    .replace(/[\s.]+$/, '')
+    .replace(/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\.|$)/i, '_$1$2')
     .slice(0, 255)
     || 'download';
 }
