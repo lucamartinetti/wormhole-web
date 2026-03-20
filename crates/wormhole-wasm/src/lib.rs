@@ -164,7 +164,8 @@ impl WormholeSender {
             .await
             .map_err(|e| JsError::new(&format!("Failed to connect to relay: {e}")))?;
         let code = mailbox.code().to_string();
-        web_sys::console::log_1(&format!("[wormhole] code allocated: {code}").into());
+        let nameplate = code.split('-').next().unwrap_or("?");
+        web_sys::console::log_1(&format!("[wormhole] code allocated: {nameplate}-••••").into());
 
         Ok(WormholeSender {
             code,
@@ -332,7 +333,8 @@ impl WormholeReceiver {
     /// mailbox_url: Mailbox relay URL (empty string uses default)
     #[wasm_bindgen]
     pub async fn create(code: &str, transit_relay_url: &str, mailbox_url: &str) -> Result<WormholeReceiver, JsError> {
-        web_sys::console::log_1(&format!("[wormhole] connecting to mailbox with code: {code}").into());
+        let nameplate = code.split('-').next().unwrap_or("?");
+        web_sys::console::log_1(&format!("[wormhole] connecting to mailbox with code: {nameplate}-••••").into());
         let config = app_config(mailbox_url);
         let code: Code = code
             .parse()
