@@ -172,7 +172,7 @@ function startSendWasm(fileOrFiles) {
   document.getElementById('send-progress').setAttribute('aria-valuenow', '0');
   hide('send-code-section');
   hide('send-transfer-info');
-
+  show('send-keep-open');
 
   document.getElementById('send-status-text').focus();
 
@@ -200,6 +200,7 @@ function startSendWasm(fileOrFiles) {
     },
     onError(msg) {
       transferActive = false;
+      hide('send-keep-open');
       document.getElementById('send-status-text').textContent = msg;
       document.getElementById('send-status-text').className = 'status-text error';
       var btn = document.getElementById('send-cancel-btn');
@@ -218,6 +219,7 @@ function startSendWasm(fileOrFiles) {
 
 function markSendComplete() {
   hide('send-code-section');
+  hide('send-keep-open');
   document.getElementById('send-progress').style.width = '100%';
   document.getElementById('send-progress').className = 'progress-bar done';
   document.getElementById('send-progress').setAttribute('aria-valuenow', '100');
