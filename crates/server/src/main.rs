@@ -101,7 +101,7 @@ async fn security_headers(
     let headers = response.headers_mut();
     headers.insert(
         HeaderName::from_static("content-security-policy"),
-        HeaderValue::from_static("default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://relay.magic-wormhole.io:443; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
+        HeaderValue::from_static("default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://cloud.umami.is; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://relay.magic-wormhole.io:443 https://cloud.umami.is; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
     );
     headers.insert(
         HeaderName::from_static("x-content-type-options"),
