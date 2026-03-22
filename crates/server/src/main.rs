@@ -6,6 +6,7 @@ use axum::{
     },
     http::{StatusCode, header::{HeaderName, HeaderValue}},
     response::{Html, IntoResponse},
+    body::Body,
 };
 use clap::Parser;
 use futures_util::{SinkExt, StreamExt};
@@ -38,6 +39,7 @@ struct AppState {
     index_html: Arc<String>,
     service_worker: Arc<String>,
     transit_relay: Arc<String>,
+    http_client: reqwest::Client,
 }
 
 #[tokio::main]
@@ -62,10 +64,16 @@ async fn main() {
         .unwrap_or_else(|e| panic!("Failed to read {}: {e}", sw_path.display()));
 
     let transit_relay = args.transit_relay;
+    let http_client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .expect("failed to build HTTP client");
+
     let state = AppState {
         index_html: Arc::new(index_html),
         service_worker: Arc::new(service_worker),
         transit_relay: Arc::new(transit_relay.clone()),
+        http_client,
     };
 
     // Static file service
@@ -75,6 +83,8 @@ async fn main() {
         .route("/health", axum::routing::get(health))
         .route("/sw.js", axum::routing::get(serve_sw))
         .route("/transit", axum::routing::get(transit_ws))
+        .route("/a/script.js", axum::routing::get(analytics_script))
+        .route("/a/api/send", axum::routing::post(analytics_event))
         // SPA fallback: /receive/<code> serves index.html
         .route("/receive/{code}", axum::routing::get(spa_fallback))
         // Static files under /static/
@@ -101,7 +111,7 @@ async fn security_headers(
     let headers = response.headers_mut();
     headers.insert(
         HeaderName::from_static("content-security-policy"),
-        HeaderValue::from_static("default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://cloud.umami.is; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://relay.magic-wormhole.io:443 https://cloud.umami.is https://api-gateway.umami.dev; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
+        HeaderValue::from_static("default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' wss://relay.magic-wormhole.io:443; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"),
     );
     headers.insert(
         HeaderName::from_static("x-content-type-options"),
@@ -146,6 +156,62 @@ async fn serve_sw(State(state): State<AppState>) -> impl IntoResponse {
         ],
         state.service_worker.as_str().to_string(),
     )
+}
+
+/// GET /a/script.js — proxy Umami analytics script
+async fn analytics_script(State(state): State<AppState>) -> impl IntoResponse {
+    match state
+        .http_client
+        .get("https://cloud.umami.is/script.js")
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => {
+            let body = resp.bytes().await.unwrap_or_default();
+            (
+                StatusCode::OK,
+                [
+                    (
+                        HeaderName::from_static("content-type"),
+                        HeaderValue::from_static("application/javascript"),
+                    ),
+                    (
+                        HeaderName::from_static("cache-control"),
+                        HeaderValue::from_static("public, max-age=86400"),
+                    ),
+                ],
+                body,
+            )
+                .into_response()
+        }
+        _ => StatusCode::BAD_GATEWAY.into_response(),
+    }
+}
+
+/// POST /a/api/send — proxy Umami analytics event
+async fn analytics_event(
+    State(state): State<AppState>,
+    req: axum::http::Request<Body>,
+) -> impl IntoResponse {
+    let body = match axum::body::to_bytes(req.into_body(), 8192).await {
+        Ok(b) => b,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    match state
+        .http_client
+        .post("https://api-gateway.umami.dev/api/send")
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+    {
+        Ok(resp) => {
+            let status = StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+            let body = resp.bytes().await.unwrap_or_default();
+            (status, body).into_response()
+        }
+        Err(_) => StatusCode::BAD_GATEWAY.into_response(),
+    }
 }
 
 /// GET / (and fallback for unknown routes)
