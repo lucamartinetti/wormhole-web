@@ -3,6 +3,19 @@ let currentCode = null;
 let qrModeWeb = true; // true = web URL, false = wormhole-transfer:
 let transferActive = false;
 
+// --- Analytics helpers ---
+function track(event, data) {
+  if (typeof umami !== 'undefined') umami.track(event, data);
+}
+
+function sizeBucket(bytes) {
+  if (bytes < 1024 * 1024) return '<1MB';
+  if (bytes < 10 * 1024 * 1024) return '1-10MB';
+  if (bytes < 100 * 1024 * 1024) return '10-100MB';
+  if (bytes < 1024 * 1024 * 1024) return '100MB-1GB';
+  return '>1GB';
+}
+
 // --- Beforeunload warning ---
 window.addEventListener('beforeunload', function(e) {
   if (transferActive) {
@@ -117,6 +130,7 @@ function setQrMode(web) {
 
 function copyCode() {
   const text = qrModeWeb ? getReceiveUrl() : currentCode;
+  track('code-copy', { mode: qrModeWeb ? 'web' : 'wormhole' });
   navigator.clipboard.writeText(text).then(() => {
     const label = document.getElementById('copy-label');
     label.textContent = 'Copied!';
@@ -125,6 +139,7 @@ function copyCode() {
 }
 
 function shareCode() {
+  track('code-share', { mode: qrModeWeb ? 'web' : 'wormhole' });
   const text = qrModeWeb ? getReceiveUrl() : 'wormhole receive ' + currentCode;
   const data = { text: text };
   if (qrModeWeb) {
@@ -176,6 +191,9 @@ function startSendWasm(fileOrFiles) {
 
   document.getElementById('send-status-text').focus();
 
+  var totalSize = files.reduce(function(sum, f) { return sum + f.size; }, 0);
+  track('send-start', { files: files.length, size: sizeBucket(totalSize) });
+
   window.wasmClient.send(fileOrFiles, {
     onCode(code) {
       currentCode = code;
@@ -201,6 +219,7 @@ function startSendWasm(fileOrFiles) {
     onError(msg) {
       transferActive = false;
       hide('send-keep-open');
+      track('send-error', { error: msg });
       document.getElementById('send-status-text').textContent = msg;
       document.getElementById('send-status-text').className = 'status-text error';
       var btn = document.getElementById('send-cancel-btn');
@@ -212,6 +231,7 @@ function startSendWasm(fileOrFiles) {
     },
     onComplete() {
       transferActive = false;
+      track('send-complete');
       markSendComplete();
     },
   });
@@ -278,6 +298,9 @@ function startReceiveWasm(code) {
 
   document.getElementById('receive-status-text').focus();
 
+  var isDirectLink = window.location.pathname.match(/^\/receive\/.+$/);
+  track('receive-start', { method: isDirectLink ? 'link' : 'code' });
+
   window.wasmClient.receive(code, {
     onFileInfo(filename, filesize) {
       document.getElementById('receive-filename').textContent = filename;
@@ -305,6 +328,7 @@ function startReceiveWasm(code) {
     },
     onError(msg) {
       transferActive = false;
+      track('receive-error', { error: msg });
       document.getElementById('receive-status-text').textContent = msg;
       document.getElementById('receive-status-text').className = 'status-text error';
       document.getElementById('receive-spinner').style.display = 'none';
@@ -317,6 +341,7 @@ function startReceiveWasm(code) {
     },
     onComplete() {
       transferActive = false;
+      track('receive-complete');
       document.getElementById('receive-progress').style.width = '100%';
       document.getElementById('receive-progress').className = 'progress-bar done';
       document.getElementById('receive-progress').setAttribute('aria-valuenow', '100');
