@@ -12,9 +12,9 @@ jobs:
       group: deploy
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: superfly/flyctl-actions@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1
 
       - run: flyctl deploy --remote-only
         env:
